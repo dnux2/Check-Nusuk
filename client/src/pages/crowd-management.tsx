@@ -86,30 +86,6 @@ export function CrowdManagementPage() {
         {/* Map container */}
         <div className="flex-1 rounded-2xl overflow-hidden border border-border/50 shadow-lg relative min-h-[400px]">
           <RealMap pilgrims={pilgrims} sectorData={sectors} />
-
-          {/* Congestion warning banner — only visible when a zone is at warning level */}
-          {warningZones.length > 0 && (
-            <div
-              className={`absolute top-4 ${isRTL ? "left-4" : "right-4"} max-w-xs bg-card/90 backdrop-blur-xl border border-destructive/40 p-4 rounded-xl shadow-2xl z-[1000]`}
-              dir={isRTL ? "rtl" : "ltr"}
-            >
-              <h3 className={`font-bold flex items-center gap-2 mb-2 text-destructive ${isRTL ? "flex-row-reverse" : ""}`}>
-                <AlertCircle className="w-5 h-5" />
-                {t("congestionWarning")}
-              </h3>
-              <p className={`text-sm text-muted-foreground mb-1 ${isRTL ? "text-right" : ""}`}>
-                {warningZones.map(z => ar ? z.nameAr : z.nameEn).join("، ")}
-                {" — "}
-                {ar ? "تجاوزت ٨٠٪ من الطاقة الاستيعابية" : "exceeded 80% capacity"}
-              </p>
-              <p className={`text-xs text-muted-foreground mb-3 ${isRTL ? "text-right" : ""}`}>
-                {t("congestionDesc")}
-              </p>
-              <button className="w-full py-2 bg-destructive text-white text-sm font-bold rounded-lg hover:bg-destructive/90 transition-colors">
-                {t("executeRedirection")}
-              </button>
-            </div>
-          )}
         </div>
 
         {/* Sector status sidebar */}
@@ -117,6 +93,27 @@ export function CrowdManagementPage() {
           <h3 className={`font-display font-bold text-lg flex-shrink-0 ${isRTL ? "text-right" : ""}`}>
             {t("sectorStatus")}
           </h3>
+
+          {/* Congestion warning — moved to sidebar so it never covers the map */}
+          {warningZones.length > 0 && (
+            <div
+              className={`bg-destructive/10 border border-destructive/40 rounded-xl p-4 flex-shrink-0`}
+              dir={isRTL ? "rtl" : "ltr"}
+            >
+              <h3 className={`font-bold flex items-center gap-2 mb-1.5 text-destructive text-sm ${isRTL ? "flex-row-reverse" : ""}`}>
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                {t("congestionWarning")}
+              </h3>
+              <p className={`text-xs text-destructive/80 mb-3 leading-relaxed ${isRTL ? "text-right" : ""}`}>
+                {warningZones.map(z => ar ? z.nameAr : z.nameEn).join("، ")}
+                {" — "}
+                {ar ? "تجاوزت ٨٠٪ من الطاقة" : "exceeded 80% capacity"}
+              </p>
+              <button className="w-full py-2 bg-destructive text-white text-xs font-bold rounded-lg hover:bg-destructive/90 transition-colors">
+                {t("executeRedirection")}
+              </button>
+            </div>
+          )}
           {sectors.map(s => {
             const isWarning = s.load >= 80;
             const isBusy = s.load >= 50 && s.load < 80;

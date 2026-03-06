@@ -208,13 +208,13 @@ export function RealMap({ pilgrims, sectorData, onZoneClick }: RealMapProps) {
       <MapContainer
         center={[21.4225, 39.8900]}
         zoom={12}
-        style={{ width: "100%", height: "100%", background: "#0d1117" }}
+        style={{ width: "100%", height: "100%", background: "#f5f5f0" }}
         zoomControl={false}
         attributionControl={false}
       >
-        {/* Dark CartoDB tiles */}
+        {/* Light CartoDB Positron tiles — similar to Google Maps */}
         <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
           attribution='&copy; <a href="https://carto.com/">CARTO</a>'
           subdomains="abcd"
           maxZoom={20}
@@ -386,7 +386,7 @@ export function RealMap({ pilgrims, sectorData, onZoneClick }: RealMapProps) {
       </div>
 
       {/* Attribution */}
-      <div className="absolute bottom-2 right-2 z-[1000] text-[10px] text-white/30 font-mono" dir="ltr">
+      <div className="absolute bottom-2 right-2 z-[1000] text-[10px] text-black/40 font-mono" dir="ltr">
         © CARTO / OpenStreetMap
       </div>
     </div>
