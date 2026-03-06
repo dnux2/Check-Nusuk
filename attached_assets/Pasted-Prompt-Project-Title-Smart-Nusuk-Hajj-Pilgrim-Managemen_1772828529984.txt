@@ -1,0 +1,210 @@
+Prompt
+
+Project Title: Smart Nusuk – Hajj & Pilgrim Management Platform
+
+Project Goal
+
+Build a modern web application inspired by the Nusuk website interface. The platform should provide a clean and modern design similar to nusuk.sa while adding new AI-powered features for crowd monitoring and pilgrim management.
+
+The website should have two main parts:
+
+Pilgrim services (like Nusuk)
+
+Smart crowd management system (new features)
+
+Pages Structure
+1. Home Page
+
+A modern landing page similar to Nusuk.
+
+Sections should include:
+
+Hero section with image of Makkah
+
+Quick access buttons
+
+Information about Hajj and Umrah services
+
+Smart services powered by AI
+
+Latest announcements
+
+Buttons:
+
+Plan Your Journey
+
+Pilgrim Services
+
+Smart Crowd System
+
+Login
+
+2. Pilgrim Services Page
+
+This page provides services similar to Nusuk.
+
+Features:
+
+Apply for Hajj or Umrah permit
+
+View pilgrimage packages
+
+Book transportation
+
+Book accommodation
+
+View pilgrimage guides
+
+Multilingual support
+
+3. Smart Crowd Management Page (NEW FEATURE)
+
+This page shows the new system.
+
+Features:
+
+Live interactive map
+
+Crowd density heatmap
+
+Pilgrim location tracking
+
+Safe route recommendations
+
+Real-time alerts
+
+4. Pilgrim Tracking Page
+
+Features:
+
+Track registered pilgrims on a map
+
+Each pilgrim appears as a marker
+
+Click marker to view pilgrim profile
+
+Show location updates in real time
+
+Pilgrim profile includes:
+
+Name
+
+Nationality
+
+Permit status
+
+Campaign group
+
+Phone number
+
+5. Unauthorized Pilgrim Detection Page
+
+Features:
+
+AI camera monitoring system
+
+Detect faces in crowded areas
+
+Verify permit status through Nusuk data
+
+Send alerts if unauthorized pilgrim detected
+
+6. Emergency System Page
+
+Features:
+
+Panic button for pilgrims
+
+Send live location to supervisors
+
+Notify authorities
+
+Dashboard includes:
+
+emergency alerts
+
+rescue location
+
+response status
+
+7. AI Translator Page
+
+Features:
+
+Voice translation
+
+Text translation
+
+Multiple languages
+
+Purpose:
+
+Help supervisors communicate with pilgrims from different countries.
+
+8. Supervisor Dashboard
+
+This page is for campaign organizers.
+
+Dashboard shows:
+
+Total pilgrims
+
+Live map
+
+Active alerts
+
+Emergency cases
+
+Crowd density statistics
+
+Search for pilgrim
+
+9. Map Control Center
+
+Control center view includes:
+
+real-time crowd monitoring
+
+drone monitoring feed
+
+route safety monitoring
+
+congestion prediction
+
+Technology Stack
+
+Frontend:
+React + TailwindCSS
+
+Backend:
+Node.js + Express
+
+Database:
+Firebase or PostgreSQL
+
+Maps:
+Mapbox or Google Maps API
+
+Real-time:
+WebSockets
+
+AI features:
+OpenAI API
+
+Design Style
+
+Design should look similar to:
+
+Nusuk website
+
+modern government platforms
+
+minimal UI
+
+Arabic and English support
+
+mobile responsive
+
+Goal
+
+The goal of the system is to enhance the Nusuk ecosystem by providing AI-powered tools that help manage crowds, track pilgrims, improve safety, and assist authorities during Hajj and Umrah seasons.
