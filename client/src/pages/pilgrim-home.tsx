@@ -659,26 +659,94 @@ export function PilgrimHomePage() {
           </motion.div>
         )}
 
+        {/* Location permission card — shown only when idle */}
+        <AnimatePresence>
+          {geoStatus === "idle" && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96 }}
+              className="rounded-3xl border-2 border-primary/30 bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-950/30 dark:to-card overflow-hidden"
+            >
+              <div className={`flex items-start gap-4 px-5 py-4 ${isRTL ? "flex-row-reverse" : ""}`}>
+                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <LocateFixed className="w-6 h-6 text-primary" />
+                </div>
+                <div className={`flex-1 ${isRTL ? "text-right" : ""}`}>
+                  <p className="font-bold text-sm text-foreground mb-0.5">
+                    {ar ? "مواقيت الصلاة والطقس حسب موقعك" : "Prayer Times & Weather by Location"}
+                  </p>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    {ar
+                      ? "اسمح بمشاركة موقعك لعرض مواقيت الصلاة الدقيقة ودرجة الحرارة الفعلية في مكانك"
+                      : "Allow location access to show accurate prayer times and real temperature for your exact location"}
+                  </p>
+                  <div className={`flex gap-2 ${isRTL ? "flex-row-reverse" : ""}`}>
+                    <button
+                      onClick={requestLocation}
+                      data-testid="btn-allow-location"
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-colors"
+                    >
+                      <LocateFixed className="w-3.5 h-3.5" />
+                      {ar ? "السماح بالموقع" : "Allow Location"}
+                    </button>
+                    <button
+                      onClick={() => { setGeoStatus("denied"); fetchLiveData(21.4225, 39.8262); }}
+                      data-testid="btn-skip-location"
+                      className="px-4 py-2 rounded-xl bg-secondary text-muted-foreground text-xs font-semibold hover:bg-secondary/80 transition-colors"
+                    >
+                      {ar ? "استخدم مكة المكرمة" : "Use Makkah Default"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Prayer times */}
         <motion.div
           initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
           className="bg-gradient-to-b from-[#f5e6c8] to-white dark:from-[#3a2a12] dark:to-card border border-[#e8d4a0] dark:border-border rounded-3xl overflow-hidden"
         >
-          <div className="px-5 py-4 border-b border-[#e8d4a0] dark:border-border flex items-center gap-2">
-            <Clock className="w-4 h-4 text-accent" />
-            <span className="font-bold text-sm text-foreground">{ar ? "مواقيت الصلاة — مكة المكرمة" : "Prayer Times — Makkah"}</span>
+          <div className={`px-5 py-4 border-b border-[#e8d4a0] dark:border-border flex items-center justify-between ${isRTL ? "flex-row-reverse" : ""}`}>
+            <div className={`flex items-center gap-2 ${isRTL ? "flex-row-reverse" : ""}`}>
+              <Clock className="w-4 h-4 text-accent" />
+              <span className="font-bold text-sm text-foreground">
+                {ar
+                  ? `مواقيت الصلاة${cityName ? ` — ${cityName}` : " — مكة المكرمة"}`
+                  : `Prayer Times${cityName ? ` — ${cityName}` : " — Makkah"}`}
+              </span>
+            </div>
+            {geoStatus === "requesting" && (
+              <Loader2 className="w-4 h-4 animate-spin text-accent" />
+            )}
+            {geoStatus === "granted" && (
+              <span className="text-[10px] text-primary font-semibold flex items-center gap-1">
+                <LocateFixed className="w-3 h-3" />
+                {ar ? "موقعك الحالي" : "Your location"}
+              </span>
+            )}
+            {geoStatus === "denied" && !cityName && (
+              <span className="text-[10px] text-muted-foreground">{ar ? "مكة الافتراضي" : "Makkah default"}</span>
+            )}
           </div>
-          <div className="flex divide-x divide-border rtl:divide-x-reverse">
-            {PRAYER_TIMES.map((p) => {
-              const isNext = p.ar === "العشاء";
-              return (
-                <div key={p.ar} className={`flex-1 py-3 text-center ${isNext ? "bg-secondary/50" : ""}`}>
-                  <div className={`text-[10px] font-bold mb-1 ${isNext ? "text-primary" : "text-muted-foreground"}`}>{ar ? p.ar : p.en}</div>
-                  <div className={`text-xs font-mono font-bold ${isNext ? "text-primary" : "text-foreground"}`}>{p.time}</div>
-                  {isNext && <div className="text-[8px] text-primary mt-0.5 font-bold">{ar ? "التالية" : "Next"}</div>}
+          <div className="flex divide-x divide-[#e8d4a0] dark:divide-border rtl:divide-x-reverse">
+            {(prayers ?? PRAYER_TIMES.map(p => ({ nameAr: p.ar, nameEn: p.en, time: p.time, isNext: p.ar === "العشاء" }))).map((p) => (
+              <div key={p.nameAr} className={`flex-1 py-3 text-center ${p.isNext ? "bg-accent/10" : ""}`}>
+                <div className={`text-[10px] font-bold mb-1 ${p.isNext ? "text-accent" : "text-muted-foreground"}`}>
+                  {ar ? p.nameAr : p.nameEn}
                 </div>
-              );
-            })}
+                <div className={`text-xs font-mono font-bold ${p.isNext ? "text-accent" : "text-foreground"}`}>
+                  {geoStatus === "requesting" && !prayers ? (
+                    <span className="inline-block w-8 h-2.5 rounded bg-muted animate-pulse" />
+                  ) : p.time}
+                </div>
+                {p.isNext && (
+                  <div className="text-[8px] text-accent mt-0.5 font-bold animate-pulse">
+                    {ar ? "▸ التالية" : "▸ Next"}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </motion.div>
 
