@@ -315,7 +315,7 @@ export function RealMap({ pilgrims, sectorData, onZoneClick, highlightedPilgrimI
         })}
       </MapContainer>
 
-      {/* Zone info popup */}
+      {/* Zone info popup — smart side: west zones (lng<39.89) open on right, east on left */}
       <AnimatePresence>
         {selectedZone && (
           <motion.div
@@ -323,7 +323,7 @@ export function RealMap({ pilgrims, sectorData, onZoneClick, highlightedPilgrimI
             initial={{ opacity: 0, scale: 0.95, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
-            className={`absolute bottom-14 ${isRTL ? "right-4" : "left-4"} w-72 bg-card/97 backdrop-blur-xl border border-border rounded-2xl shadow-2xl p-5`}
+            className={`absolute bottom-14 ${selectedZone.lng < 39.89 ? "right-4" : "left-4"} w-72 bg-card/97 backdrop-blur-xl border border-border rounded-2xl shadow-2xl p-5`}
             style={{ zIndex: 850 }}
             dir={isRTL ? "rtl" : "ltr"}
           >
