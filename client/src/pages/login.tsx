@@ -36,14 +36,6 @@ export function LoginPage() {
     else setTab("supervisor");
   }, []);
 
-  // If already logged in, redirect
-  useEffect(() => {
-    const role = localStorage.getItem("role");
-    const loggedIn = localStorage.getItem("isLoggedIn");
-    if (loggedIn === "true") {
-      navigate(role === "pilgrim" ? "/pilgrim" : "/dashboard");
-    }
-  }, [navigate]);
 
   function handleSupervisorLogin(e: React.FormEvent) {
     e.preventDefault();
