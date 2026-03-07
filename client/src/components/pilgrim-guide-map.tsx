@@ -216,6 +216,22 @@ function PilgrimDot({ lat, lng, ar }: { lat: number; lng: number; ar: boolean })
   );
 }
 
+function decodePolyline(encoded: string): [number, number][] {
+  const coords: [number, number][] = [];
+  let index = 0, lat = 0, lng = 0;
+  const factor = 1e-6;
+  while (index < encoded.length) {
+    let b, shift = 0, result = 0;
+    do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+    lat += result & 1 ? ~(result >> 1) : result >> 1;
+    shift = 0; result = 0;
+    do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+    lng += result & 1 ? ~(result >> 1) : result >> 1;
+    coords.push([lat * factor, lng * factor]);
+  }
+  return coords;
+}
+
 function haversineM(lat1: number, lng1: number, lat2: number, lng2: number) {
   const R = 6371000;
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -755,66 +771,96 @@ export function PilgrimGuideMap() {
   const executeNavigation = async (facility: Facility) => {
     setCrowdModal(null);
     setNavLoading(true);
+
+    const buildNavData = (coords: [number, number][], steps: NavStep[], distM: number, durS: number): NavRoute => ({
+      coords, steps,
+      totalDistM: distM,
+      totalDurationS: durS,
+      destination: facility,
+      startLat: myLat,
+      startLng: myLng,
+    });
+
+    let navData: NavRoute | null = null;
+
+    // ── Primary: Valhalla pedestrian (accurate Makkah footpaths) ──────────────
     try {
-      const url = `https://router.project-osrm.org/route/v1/foot/${myLng},${myLat};${facility.lng},${facility.lat}?overview=full&geometries=geojson&steps=true`;
-      const res = await fetch(url);
-      const data = await res.json();
+      const valRes = await fetch("https://valhalla1.openstreetmap.de/route", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          locations: [
+            { lon: myLng, lat: myLat },
+            { lon: facility.lng, lat: facility.lat },
+          ],
+          costing: "pedestrian",
+          costing_options: { pedestrian: { use_ferry: 0, use_living_streets: 1, walkway_factor: 0.9 } },
+          directions_options: { language: ar ? "ar" : "en-US" },
+        }),
+      });
+      const vd = await valRes.json();
+      if (!vd.trip?.legs?.[0]) throw new Error("No Valhalla route");
+      const leg = vd.trip.legs[0];
+      const shapeCoords = decodePolyline(leg.shape);
+      const steps: NavStep[] = leg.maneuvers.map((m: any) => {
+        const type: string = m.type === 1 ? "depart" : m.type === 4 ? "arrive" : "turn";
+        const modifier = m.type === 12 ? "left" : m.type === 13 ? "right" : m.type === 24 ? "slight right" : m.type === 25 ? "slight left" : undefined;
+        const { icon, textAr, textEn } = maneuverToStep(type, modifier, m.street_names?.[0] || "");
+        return { icon, textAr, textEn, distanceM: Math.round(m.length * 1000), durationS: Math.round(m.time) };
+      });
+      navData = buildNavData(shapeCoords, steps, Math.round(leg.summary.length * 1000), Math.round(leg.summary.time));
+    } catch { /* fall to OSRM */ }
 
-      if (data.code !== "Ok" || !data.routes?.[0]) throw new Error("No route");
-
-      const route = data.routes[0];
-      const coords: [number, number][] = route.geometry.coordinates.map(([lng, lat]: [number, number]) => [lat, lng]);
-
-      const steps: NavStep[] = [];
-      for (const leg of route.legs) {
-        for (const step of leg.steps) {
-          const m = step.maneuver;
-          const { icon, textAr, textEn } = maneuverToStep(m.type, m.modifier, step.name || "");
-          steps.push({ icon, textAr, textEn, distanceM: step.distance, durationS: step.duration });
+    // ── Fallback: OSRM foot profile ────────────────────────────────────────────
+    if (!navData) {
+      try {
+        const url = `https://router.project-osrm.org/route/v1/foot/${myLng},${myLat};${facility.lng},${facility.lat}?overview=full&geometries=geojson&steps=true`;
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.code !== "Ok" || !data.routes?.[0]) throw new Error("No OSRM route");
+        const route = data.routes[0];
+        const coords: [number, number][] = route.geometry.coordinates.map(([lng, lat]: [number, number]) => [lat, lng]);
+        const steps: NavStep[] = [];
+        for (const leg of route.legs) {
+          for (const step of leg.steps) {
+            const m = step.maneuver;
+            const { icon, textAr, textEn } = maneuverToStep(m.type, m.modifier, step.name || "");
+            steps.push({ icon, textAr, textEn, distanceM: step.distance, durationS: step.duration });
+          }
         }
-      }
+        navData = buildNavData(coords, steps, route.distance, route.duration);
+      } catch { /* fall to straight line */ }
+    }
 
-      const navData: NavRoute = {
-        coords, steps,
-        totalDistM: route.distance,
-        totalDurationS: route.duration,
-        destination: facility,
-        startLat: myLat,
-        startLng: myLng,
-      };
-
-      setNavRoute(navData);
-      setCurrentStep(0);
-      setRemainingM(route.distance);
-      setRemainingS(route.duration);
-      setStepsOpen(false);
-
-      if (gpsStatus === "granted" && !customOrigin) startLiveTracking(navData);
-
+    // ── Last resort: straight line ────────────────────────────────────────────
+    if (!navData) {
+      const distM = haversineM(myLat, myLng, facility.lat, facility.lng);
+      navData = buildNavData(
+        [[myLat, myLng], [facility.lat, facility.lng]],
+        [
+          { icon: "🚶", textAr: `توجه نحو ${facility.nameAr}`, textEn: `Head toward ${facility.nameEn}`, distanceM: distM, durationS: distM / 1.2 },
+          { icon: "🏁", textAr: "وصلت إلى وجهتك", textEn: "You have arrived", distanceM: 0, durationS: 0 },
+        ],
+        distM, distM / 1.2
+      );
+      toast({ title: ar ? "⚠️ خريطة مباشرة — تحقق من الإنترنت" : "⚠️ Direct route — check internet", variant: "destructive" });
+    } else {
       toast({
         title: ar ? `🗺️ بدأ التوجيه إلى: ${facility.nameAr}` : `🗺️ Navigation started: ${facility.nameEn}`,
         description: ar
-          ? `${fmtDist(route.distance, true)} · ${fmtTime(route.duration, true)} سيراً`
-          : `${fmtDist(route.distance, false)} · ${fmtTime(route.duration, false)} walking`,
+          ? `${fmtDist(navData.totalDistM, true)} · ${fmtTime(navData.totalDurationS, true)} سيراً`
+          : `${fmtDist(navData.totalDistM, false)} · ${fmtTime(navData.totalDurationS, false)} walking`,
       });
-    } catch {
-      const distM = haversineM(myLat, myLng, facility.lat, facility.lng);
-      const durationS = (distM / 1.2);
-      setNavRoute({
-        coords: [[myLat, myLng], [facility.lat, facility.lng]],
-        steps: [
-          { icon: "🚶", textAr: `توجه نحو ${facility.nameAr}`, textEn: `Head toward ${facility.nameEn}`, distanceM: distM, durationS },
-          { icon: "🏁", textAr: "وصلت إلى وجهتك", textEn: "You have arrived", distanceM: 0, durationS: 0 },
-        ],
-        totalDistM: distM, totalDurationS: durationS, destination: facility,
-        startLat: myLat, startLng: myLng,
-      });
-      setRemainingM(distM);
-      setRemainingS(durationS);
-      toast({ title: ar ? "⚠️ خريطة مباشرة — تحقق من الإنترنت" : "⚠️ Direct route — check internet", variant: "destructive" });
-    } finally {
-      setNavLoading(false);
     }
+
+    setNavRoute(navData);
+    setCurrentStep(0);
+    setRemainingM(navData.totalDistM);
+    setRemainingS(navData.totalDurationS);
+    setStepsOpen(false);
+    setNavLoading(false);
+
+    if (gpsStatus === "granted" && !customOrigin) startLiveTracking(navData);
   };
 
   const handleNavigate = async (facility: Facility) => {
