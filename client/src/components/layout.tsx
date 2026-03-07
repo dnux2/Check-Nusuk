@@ -164,11 +164,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
           <div className={`flex items-center gap-3 ${isRTL ? "flex-row-reverse" : ""}`}>
             {/* Language Toggle */}
-            <div className="flex items-center bg-secondary rounded-xl overflow-hidden border border-border">
+            <div className="flex items-center bg-secondary rounded-lg overflow-hidden border border-border">
               <button
                 data-testid="button-lang-en"
                 onClick={() => setLang("en")}
-                className={`px-3 py-1.5 text-sm font-bold transition-all ${
+                className={`px-2 py-1 text-xs font-bold transition-all ${
                   lang === "en" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
@@ -177,11 +177,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <button
                 data-testid="button-lang-ar"
                 onClick={() => setLang("ar")}
-                className={`px-3 py-1.5 text-sm font-bold transition-all ${
+                className={`px-2 py-1 text-xs font-bold transition-all ${
                   lang === "ar" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                العربية
+                ع
               </button>
             </div>
 
