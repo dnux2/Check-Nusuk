@@ -1,6 +1,7 @@
 import { usePilgrims, useCreatePilgrim } from "@/hooks/use-pilgrims";
 import { useState, useEffect, useMemo } from "react";
 import { Search, Plus, MapPin, Eye, ShieldAlert, Navigation, ChevronDown, ChevronRight, Users } from "lucide-react";
+import { PageHeader } from "@/components/page-header";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage } from "@/contexts/language-context";
 import { PilgrimPopup } from "@/components/pilgrim-popup";
@@ -119,20 +120,21 @@ export function PilgrimsPage() {
   return (
     <div className="p-6 md:p-8 max-w-[1600px] mx-auto">
       {/* Header */}
-      <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 ${isRTL ? "sm:flex-row-reverse" : ""}`}>
-        <div className={isRTL ? "text-right" : ""}>
-          <h1 className="text-3xl font-bold text-foreground">{t("pilgrimRegistry")}</h1>
-          <p className="text-muted-foreground mt-1">{t("manageAndTrack")}</p>
-        </div>
-        <button
-          data-testid="button-register-pilgrim"
-          onClick={() => setModalOpen(true)}
-          className={`px-6 py-3 bg-primary text-primary-foreground font-bold rounded-xl shadow-lg shadow-primary/25 flex items-center gap-2 ${isRTL ? "flex-row-reverse" : ""}`}
-        >
-          <Plus className="w-5 h-5" />
-          {t("registerPilgrim")}
-        </button>
-      </div>
+      <PageHeader
+        icon={<Users className="w-6 h-6 text-primary" />}
+        title={t("pilgrimRegistry")}
+        subtitle={t("manageAndTrack")}
+        badge={
+          <button
+            data-testid="button-register-pilgrim"
+            onClick={() => setModalOpen(true)}
+            className={`px-5 py-2.5 bg-primary text-primary-foreground font-bold rounded-xl shadow-lg shadow-primary/25 flex items-center gap-2 text-sm ${isRTL ? "flex-row-reverse" : ""}`}
+          >
+            <Plus className="w-4 h-4" />
+            {t("registerPilgrim")}
+          </button>
+        }
+      />
 
       <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden flex flex-col">
         {/* Filters */}

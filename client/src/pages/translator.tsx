@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useTranslate } from "@/hooks/use-ai";
 import { Languages, ArrowRightLeft, Mic, MicOff, Volume2, VolumeX, Copy, Check, Loader2 } from "lucide-react";
+import { PageHeader } from "@/components/page-header";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage } from "@/contexts/language-context";
 import { useToast } from "@/hooks/use-toast";
@@ -123,13 +124,11 @@ export function TranslatorPage() {
     <div className="p-6 md:p-8 max-w-[1200px] mx-auto h-[calc(100vh-5rem)] flex flex-col" dir={isRTL ? "rtl" : "ltr"}>
 
       {/* Header */}
-      <div className={`mb-8 ${isRTL ? "text-right" : ""}`}>
-        <h1 className={`text-3xl font-display font-bold text-foreground flex items-center gap-3 ${isRTL ? "flex-row-reverse" : ""}`}>
-          <Languages className="w-8 h-8 text-primary flex-shrink-0" />
-          {labels.title}
-        </h1>
-        <p className="text-muted-foreground mt-1 text-lg">{labels.subtitle}</p>
-      </div>
+      <PageHeader
+        icon={<Languages className="w-6 h-6 text-primary" />}
+        title={labels.title}
+        subtitle={labels.subtitle}
+      />
 
       {/* Main translator grid */}
       <div className={`grid md:grid-cols-[1fr,auto,1fr] gap-4 items-start flex-1 min-h-0`}>

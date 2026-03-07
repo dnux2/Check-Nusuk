@@ -1,6 +1,7 @@
 import { StatCard } from "@/components/stat-card";
 import { RealMap } from "@/components/real-map";
-import { Users, AlertTriangle, ShieldAlert, Activity } from "lucide-react";
+import { PageHeader } from "@/components/page-header";
+import { Users, AlertTriangle, ShieldAlert, Activity, LayoutDashboard } from "lucide-react";
 import { usePilgrims } from "@/hooks/use-pilgrims";
 import { useEmergencies } from "@/hooks/use-emergencies";
 import { useAlerts } from "@/hooks/use-alerts";
@@ -38,19 +39,20 @@ export function Dashboard() {
 
   return (
     <div className="p-6 md:p-8 max-w-[1600px] mx-auto space-y-8" dir={isRTL ? "rtl" : "ltr"}>
-      <div className={`flex flex-col md:flex-row justify-between items-start md:items-center gap-4 ${isRTL ? "md:flex-row-reverse" : ""}`}>
-        <div className={isRTL ? "text-right" : ""}>
-          <h1 className="text-3xl font-display font-bold text-foreground">{t("overviewTitle")}</h1>
-          <p className="text-muted-foreground mt-1 text-lg">{t("systemStatus")}</p>
-        </div>
-        <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 rounded-full font-medium border border-emerald-200 dark:border-emerald-800">
-          <span className="relative flex h-2.5 w-2.5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-          </span>
-          {t("allSystemsNominal")}
-        </div>
-      </div>
+      <PageHeader
+        icon={<LayoutDashboard className="w-6 h-6 text-primary" />}
+        title={t("overviewTitle")}
+        subtitle={t("systemStatus")}
+        badge={
+          <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 rounded-full font-medium border border-emerald-200 dark:border-emerald-800 text-sm">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+            </span>
+            {t("allSystemsNominal")}
+          </div>
+        }
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
         <StatCard delay={0.1} title={t("totalPilgrimsTracked")} value={totalPilgrims.toLocaleString()} icon={<Users className="w-6 h-6" />} trend="+2.4%" trendUp={true} />

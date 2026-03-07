@@ -1,5 +1,6 @@
 import { useAlerts, useCreateAlert } from "@/hooks/use-alerts";
 import { Shield, AlertCircle, Camera, Radio, Zap, Users } from "lucide-react";
+import { PageHeader } from "@/components/page-header";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { useLanguage } from "@/contexts/language-context";
@@ -29,44 +30,32 @@ export function SecurityPage() {
     <div className="p-6 md:p-8 max-w-[1600px] mx-auto space-y-6" dir={isRTL ? "rtl" : "ltr"}>
 
       {/* ── Page Header ── */}
-      <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-5 ${isRTL ? "sm:flex-row-reverse" : ""}`}>
-        <div className={`flex items-center gap-4 ${isRTL ? "flex-row-reverse" : ""}`}>
-          <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0">
-            <Shield className="w-7 h-7 text-primary" />
+      <PageHeader
+        icon={<Shield className="w-6 h-6 text-primary" />}
+        title={ar ? "الأمن والذكاء الاصطناعي" : "AI Security & Detection"}
+        subtitle={ar ? "مراقبة مخيمات منى بالكاميرا الذكية — كشف الحجاج المصرحين وغير المصرحين" : "Smart camera surveillance for Mina Camps — real-time permit verification"}
+        badge={
+          <div className={`flex items-center gap-2 flex-wrap ${isRTL ? "flex-row-reverse" : ""}`}>
+            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 text-xs font-semibold ${isRTL ? "flex-row-reverse" : ""}`}>
+              <Radio className="w-3 h-3 animate-pulse" />
+              {ar ? "بث مباشر" : "Live"}
+            </div>
+            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary border border-border text-secondary-foreground text-xs font-semibold ${isRTL ? "flex-row-reverse" : ""}`}>
+              <Camera className="w-3.5 h-3.5" />
+              {ar ? "كاميرا منى C2" : "Mina Cam C2"}
+            </div>
+            <button
+              onClick={triggerMockDetection}
+              data-testid="button-test-alert"
+              disabled={createAlert.isPending}
+              className={`flex items-center gap-2 px-4 py-2 bg-destructive/10 text-destructive font-semibold rounded-xl border border-destructive/30 hover:bg-destructive hover:text-white transition-all duration-200 text-sm ${isRTL ? "flex-row-reverse" : ""} disabled:opacity-50`}
+            >
+              <Zap className="w-4 h-4" />
+              {ar ? "اختبار تنبيه" : "Test Alert"}
+            </button>
           </div>
-          <div className={isRTL ? "text-right" : ""}>
-            <h1 className="text-2xl font-display font-bold text-foreground leading-tight">
-              {ar ? "الأمن والذكاء الاصطناعي" : "AI Security & Detection"}
-            </h1>
-            <p className="text-muted-foreground text-sm mt-0.5">
-              {ar
-                ? "مراقبة مخيمات منى بالكاميرا الذكية — كشف الحجاج المصرحين وغير المصرحين"
-                : "Smart camera surveillance for Mina Camps — real-time permit verification"}
-            </p>
-          </div>
-        </div>
-
-        {/* Status badges + test button */}
-        <div className={`flex items-center gap-3 flex-shrink-0 ${isRTL ? "flex-row-reverse" : ""}`}>
-          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 text-xs font-semibold ${isRTL ? "flex-row-reverse" : ""}`}>
-            <Radio className="w-3 h-3 animate-pulse" />
-            {ar ? "بث مباشر" : "Live"}
-          </div>
-          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary border border-border text-secondary-foreground text-xs font-semibold ${isRTL ? "flex-row-reverse" : ""}`}>
-            <Camera className="w-3.5 h-3.5" />
-            {ar ? "كاميرا منى C2" : "Mina Cam C2"}
-          </div>
-          <button
-            onClick={triggerMockDetection}
-            data-testid="button-test-alert"
-            disabled={createAlert.isPending}
-            className={`flex items-center gap-2 px-4 py-2 bg-destructive/10 text-destructive font-semibold rounded-xl border border-destructive/30 hover:bg-destructive hover:text-white transition-all duration-200 text-sm ${isRTL ? "flex-row-reverse" : ""} disabled:opacity-50`}
-          >
-            <Zap className="w-4 h-4" />
-            {ar ? "اختبار تنبيه" : "Test Alert"}
-          </button>
-        </div>
-      </div>
+        }
+      />
 
       {/* ── Stats row ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">

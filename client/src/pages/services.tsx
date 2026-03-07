@@ -1,12 +1,14 @@
 import { useState } from "react";
-import { FileText, Bus, CheckCircle } from "lucide-react";
+import { FileText, Bus, CheckCircle, Package } from "lucide-react";
+import { PageHeader } from "@/components/page-header";
 import { motion } from "framer-motion";
 import { useLanguage } from "@/contexts/language-context";
 
 export function ServicesPage() {
   const [activeTab, setActiveTab] = useState("permit");
   const [isSubmitted, setSubmitted] = useState(false);
-  const { t, isRTL } = useLanguage();
+  const { t, isRTL, lang } = useLanguage();
+  const ar = lang === "ar";
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -16,9 +18,11 @@ export function ServicesPage() {
 
   return (
     <div className="p-6 md:p-8 max-w-[1000px] mx-auto" dir={isRTL ? "rtl" : "ltr"}>
-      <div className={isRTL ? "text-right" : ""}>
-        <h1 className="text-3xl font-display font-bold text-foreground mb-8">{t("pilgrimServicesTitle")}</h1>
-      </div>
+      <PageHeader
+        icon={<Package className="w-6 h-6 text-primary" />}
+        title={t("pilgrimServicesTitle")}
+        subtitle={ar ? "إصدار التصاريح وإدارة الطلبات" : "Permit issuance and request management"}
+      />
 
       <div className={`flex gap-4 mb-8 border-b border-border pb-4 ${isRTL ? "flex-row-reverse" : ""}`}>
         <button

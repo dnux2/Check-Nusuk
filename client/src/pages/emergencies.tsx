@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useEmergencies, useResolveEmergency } from "@/hooks/use-emergencies";
 import { usePilgrims } from "@/hooks/use-pilgrims";
 import { AlertTriangle, MapPin, CheckCircle, ShieldCheck, User, Phone, HeartPulse, Navigation } from "lucide-react";
+import { PageHeader } from "@/components/page-header";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
 import { useLanguage } from "@/contexts/language-context";
@@ -89,16 +90,16 @@ export function EmergenciesPage() {
   return (
     <div className="p-6 md:p-8 max-w-[1200px] mx-auto" dir={isRTL ? "rtl" : "ltr"}>
       {/* Header */}
-      <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-5 ${isRTL ? "sm:flex-row-reverse" : ""}`}>
-        <div className={isRTL ? "text-right" : ""}>
-          <h1 className="text-3xl font-display font-bold text-foreground">{t("emergencyResponseTitle")}</h1>
-          <p className="text-muted-foreground mt-1">{t("emergencyResponseDesc")}</p>
-        </div>
-        <div className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border font-semibold text-sm ${
-          activeCount > 0
-            ? "bg-destructive/10 border-destructive/30 text-destructive"
-            : "bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-950/30 dark:border-emerald-800 dark:text-emerald-400"
-        }`}>
+      <PageHeader
+        icon={<AlertTriangle className="w-6 h-6 text-primary" />}
+        title={t("emergencyResponseTitle")}
+        subtitle={t("emergencyResponseDesc")}
+        badge={
+          <div className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border font-semibold text-sm ${
+            activeCount > 0
+              ? "bg-destructive/10 border-destructive/30 text-destructive"
+              : "bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-950/30 dark:border-emerald-800 dark:text-emerald-400"
+          }`}>
           {activeCount > 0 ? (
             <>
               <AlertTriangle className="w-4 h-4" />
@@ -110,8 +111,9 @@ export function EmergenciesPage() {
               {ar ? "لا حالات نشطة" : t("noActiveEmergencies")}
             </>
           )}
-        </div>
-      </div>
+          </div>
+        }
+      />
 
       {/* Filter tabs */}
       <div className={`flex items-center gap-2 mb-6 flex-wrap ${isRTL ? "flex-row-reverse" : ""}`}>
