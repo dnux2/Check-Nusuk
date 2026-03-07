@@ -10,15 +10,13 @@ import { type Pilgrim } from "@shared/schema";
 import { PilgrimLayout } from "@/components/pilgrim-layout";
 import { useUpdatePilgrimLocation } from "@/hooks/use-pilgrims";
 
-type SharingMode = "saver" | "normal" | "active";
+type MotionState = "stationary" | "walking";
 
-const MODE_INTERVALS: Record<SharingMode, number> = {
-  saver:  15 * 60 * 1000,
-  normal:  5 * 60 * 1000,
-  active:  2 * 60 * 1000,
-};
-const EMERGENCY_INTERVAL = 30 * 1000;
-const MIN_MOVE_METERS = 50;
+const STATIONARY_INTERVAL = 10 * 60 * 1000;
+const WALKING_INTERVAL    =  2 * 60 * 1000;
+const EMERGENCY_INTERVAL  =     30 * 1000;
+const GPS_CHECK_MS        =     30 * 1000;
+const MIN_MOVE_METERS     = 50;
 
 function haversineM(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371000;
@@ -213,33 +211,53 @@ export function PilgrimHomePage() {
   const { data: pilgrim } = useQuery<Pilgrim>({
     queryKey: ["/api/pilgrims", pilgrimId],
     queryFn: () => fetch(`/api/pilgrims/${pilgrimId}`).then(r => r.json()),
+    refetchInterval: 15000,
   });
 
   const [isSharing, setIsSharing] = useState(false);
-  const [sharingMode, setSharingMode] = useState<SharingMode>("normal");
+  const [motionState, setMotionState] = useState<MotionState>("stationary");
   const [lastAccuracy, setLastAccuracy] = useState<number | null>(null);
   const [countdown, setCountdown] = useState<number>(0);
   const [queueSize, setQueueSize] = useState(0);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const lastSentRef = useRef<{ lat: number; lng: number } | null>(null);
-  const nextTickRef = useRef<number>(0);
+  const [batteryLow, setBatteryLow] = useState(false);
+
+  const gpsCheckRef   = useRef<ReturnType<typeof setInterval> | null>(null);
+  const countdownRef  = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastSentRef   = useRef<{ lat: number; lng: number; ts: number } | null>(null);
+  const nextSendRef   = useRef<number>(0);
+  const posHistoryRef = useRef<{ lat: number; lng: number; ts: number }[]>([]);
+  const batteryAlertRef = useRef(false);
+  const isSharingRef  = useRef(false);
+  const isEmergencyRef = useRef(false);
   const updateLocation = useUpdatePilgrimLocation();
 
   const isEmergency = !!pilgrim?.emergencyStatus;
+  isEmergencyRef.current = isEmergency;
 
-  const getInterval = useCallback((mode: SharingMode) => {
-    return isEmergency ? EMERGENCY_INTERVAL : MODE_INTERVALS[mode];
-  }, [isEmergency]);
+  const getSmartSendInterval = useCallback((motion: MotionState, emergency: boolean): number => {
+    if (emergency) return EMERGENCY_INTERVAL;
+    return motion === "walking" ? WALKING_INTERVAL : STATIONARY_INTERVAL;
+  }, []);
 
-  const sendLocation = useCallback((lat: number, lng: number, forced = false) => {
+  const detectMotion = useCallback((lat: number, lng: number): MotionState => {
+    const now = Date.now();
+    const history = posHistoryRef.current;
+    history.push({ lat, lng, ts: now });
+    if (history.length > 20) history.shift();
+    const twoMinAgo = now - 2 * 60 * 1000;
+    const old = [...history].reverse().find(p => p.ts <= twoMinAgo);
+    if (!old) return "stationary";
+    return haversineM(old.lat, old.lng, lat, lng) >= MIN_MOVE_METERS ? "walking" : "stationary";
+  }, []);
+
+  const sendLocationUpdate = useCallback((lat: number, lng: number, forced = false) => {
     const prev = lastSentRef.current;
     if (!forced && prev && haversineM(prev.lat, prev.lng, lat, lng) < MIN_MOVE_METERS) return;
     updateLocation.mutate(
       { id: pilgrimId, locationLat: lat, locationLng: lng },
       {
         onSuccess: () => {
-          lastSentRef.current = { lat, lng };
+          lastSentRef.current = { lat, lng, ts: Date.now() };
           const q = loadQueue(LOC_QUEUE_KEY);
           if (q.length > 0) {
             const next = q.shift()!;
@@ -258,65 +276,104 @@ export function PilgrimHomePage() {
     );
   }, [updateLocation, pilgrimId, LOC_QUEUE_KEY]);
 
-  const tick = useCallback((mode: SharingMode) => {
-    if (!navigator.geolocation) return;
+  const checkBattery = useCallback(async () => {
+    if (!("getBattery" in navigator)) return;
+    if (batteryAlertRef.current) return;
+    try {
+      const battery = await (navigator as unknown as { getBattery(): Promise<{ level: number }> }).getBattery();
+      const pct = Math.round(battery.level * 100);
+      if (pct < 20) {
+        batteryAlertRef.current = true;
+        setBatteryLow(true);
+        toast({
+          title: ar ? "⚠️ بطاريتك منخفضة" : "⚠️ Low Battery",
+          description: ar
+            ? "ابقَ في مكانك تماماً ولا تتحرك — الفريق في الطريق إليك"
+            : "Stay exactly where you are — do not move, help is coming",
+          variant: "destructive",
+        });
+        apiRequest("POST", "/api/chat/messages", {
+          message: ar
+            ? `🔋 تنبيه تلقائي: بطارية الحاج ${pilgrim?.name || ""}  منخفضة (${pct}%) وهو في وضع طوارئ. لا تُرسِل إليه مهام تتطلب التنقل.`
+            : `🔋 Auto-alert: Pilgrim ${pilgrim?.name || ""}  battery is low (${pct}%) with an active emergency. Avoid tasks requiring movement.`,
+          pilgrimId,
+          senderRole: "pilgrim",
+        });
+      }
+    } catch { /* ignore */ }
+  }, [ar, pilgrim?.name, pilgrimId, toast]);
+
+  const doGpsTick = useCallback(() => {
+    if (!navigator.geolocation || !isSharingRef.current) return;
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setLastAccuracy(Math.round(pos.coords.accuracy));
-        sendLocation(pos.coords.latitude, pos.coords.longitude, isEmergency);
+        const { latitude: lat, longitude: lng, accuracy } = pos.coords;
+        setLastAccuracy(Math.round(accuracy));
+        const motion = detectMotion(lat, lng);
+        setMotionState(motion);
+        const emergency = isEmergencyRef.current;
+        const sendInterval = getSmartSendInterval(motion, emergency);
+        const now = Date.now();
+        const shouldSend = now >= nextSendRef.current;
+        if (shouldSend) {
+          sendLocationUpdate(lat, lng, emergency);
+          nextSendRef.current = now + sendInterval;
+        }
+        if (emergency) checkBattery();
       },
       () => {},
-      { enableHighAccuracy: mode === "active" || isEmergency, timeout: 8000, maximumAge: mode === "saver" ? 120000 : 30000 }
+      { enableHighAccuracy: isEmergencyRef.current, timeout: 8000, maximumAge: 20000 }
     );
-  }, [sendLocation, isEmergency]);
+  }, [detectMotion, getSmartSendInterval, sendLocationUpdate, checkBattery]);
 
-  const startPolling = useCallback((mode: SharingMode) => {
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    if (countdownRef.current) clearInterval(countdownRef.current);
-    const ms = getInterval(mode);
-    tick(mode);
-    nextTickRef.current = Date.now() + ms;
-    setCountdown(Math.round(ms / 1000));
-    intervalRef.current = setInterval(() => {
-      tick(mode);
-      nextTickRef.current = Date.now() + ms;
-    }, ms);
-    countdownRef.current = setInterval(() => {
-      const remaining = Math.max(0, Math.round((nextTickRef.current - Date.now()) / 1000));
-      setCountdown(remaining);
-    }, 1000);
-  }, [tick, getInterval]);
-
-  const startSharing = () => {
+  const startSmartTracking = useCallback(() => {
     if (!navigator.geolocation) {
-      toast({ title: ar ? "خطأ" : "Error", description: ar ? "الجهاز لا يدعم GPS" : "Device doesn't support GPS", variant: "destructive" });
+      toast({ title: ar ? "خطأ" : "Error", description: ar ? "الجهاز لا يدعم GPS" : "GPS not supported", variant: "destructive" });
       return;
     }
+    isSharingRef.current = true;
     setIsSharing(true);
-    setQueueSize(loadQueue().length);
-    startPolling(sharingMode);
-  };
+    setQueueSize(loadQueue(LOC_QUEUE_KEY).length);
+    const initialInterval = isEmergencyRef.current ? EMERGENCY_INTERVAL : STATIONARY_INTERVAL;
+    nextSendRef.current = Date.now() + 2000;
+    doGpsTick();
+    if (gpsCheckRef.current) clearInterval(gpsCheckRef.current);
+    gpsCheckRef.current = setInterval(doGpsTick, GPS_CHECK_MS);
+    if (countdownRef.current) clearInterval(countdownRef.current);
+    countdownRef.current = setInterval(() => {
+      const remaining = Math.max(0, Math.round((nextSendRef.current - Date.now()) / 1000));
+      setCountdown(remaining);
+    }, 1000);
+    setCountdown(Math.round(initialInterval / 1000));
+  }, [doGpsTick, ar, toast, LOC_QUEUE_KEY]);
 
   const stopSharing = () => {
-    if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
+    isSharingRef.current = false;
+    if (gpsCheckRef.current) { clearInterval(gpsCheckRef.current); gpsCheckRef.current = null; }
     if (countdownRef.current) { clearInterval(countdownRef.current); countdownRef.current = null; }
     setIsSharing(false);
     setLastAccuracy(null);
     setCountdown(0);
   };
 
-  const changeMode = (mode: SharingMode) => {
-    setSharingMode(mode);
-    if (isSharing) startPolling(mode);
-  };
+  useEffect(() => {
+    if (geoStatus === "granted" && !isSharingRef.current) {
+      startSmartTracking();
+    }
+  }, [geoStatus, startSmartTracking]);
 
   useEffect(() => {
-    if (isSharing) startPolling(sharingMode);
-  }, [isEmergency]);
+    if (isSharingRef.current && isEmergency) {
+      batteryAlertRef.current = false;
+      nextSendRef.current = Date.now() + 2000;
+      doGpsTick();
+    }
+  }, [isEmergency, doGpsTick]);
 
   useEffect(() => {
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      isSharingRef.current = false;
+      if (gpsCheckRef.current) clearInterval(gpsCheckRef.current);
       if (countdownRef.current) clearInterval(countdownRef.current);
     };
   }, []);
@@ -447,114 +504,95 @@ export function PilgrimHomePage() {
           </span>
         </motion.div>
 
-        {/* Smart adaptive location sharing */}
+        {/* Smart AI location tracking — auto card */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
-          {!isSharing ? (
-            <div className="rounded-3xl border-2 border-[#10B981] overflow-hidden bg-emerald-50 dark:bg-emerald-950/20">
-              {/* Mode selector */}
-              <div className="px-4 pt-4 pb-2" dir={isRTL ? "rtl" : "ltr"}>
-                <p className={`text-[11px] font-semibold text-[#0E4D41]/60 mb-2.5 ${isRTL ? "text-right" : ""}`}>
-                  {ar ? "اختر وتيرة مشاركة الموقع:" : "Choose location update frequency:"}
-                </p>
-                <div className={`flex gap-2 ${isRTL ? "flex-row-reverse" : ""}`}>
-                  {([
-                    { key: "saver"  as SharingMode, labelAr: "توفير طاقة", labelEn: "Battery Saver", subAr: "كل ١٥ دقيقة", subEn: "Every 15 min", icon: <BatteryLow className="w-3.5 h-3.5" /> },
-                    { key: "normal" as SharingMode, labelAr: "عادي",        labelEn: "Normal",        subAr: "كل ٥ دقائق", subEn: "Every 5 min",  icon: <MapPin className="w-3.5 h-3.5" /> },
-                    { key: "active" as SharingMode, labelAr: "تتبع نشط",    labelEn: "Active Track",  subAr: "كل دقيقتين", subEn: "Every 2 min",  icon: <Zap className="w-3.5 h-3.5" /> },
-                  ]).map(m => (
-                    <button
-                      key={m.key}
-                      data-testid={`btn-mode-${m.key}`}
-                      onClick={() => setSharingMode(m.key)}
-                      className={`flex-1 py-2 px-1.5 rounded-2xl text-center transition-all border-2 ${
-                        sharingMode === m.key
-                          ? "border-[#10B981] bg-[#10B981] text-white"
-                          : "border-[#10B981]/30 bg-white/60 dark:bg-black/20 text-[#0E4D41] dark:text-[#10B981]"
-                      }`}
-                    >
-                      <div className="flex flex-col items-center gap-0.5">
-                        {m.icon}
-                        <span className="text-[10px] font-bold leading-tight">{ar ? m.labelAr : m.labelEn}</span>
-                        <span className="text-[9px] opacity-70">{ar ? m.subAr : m.subEn}</span>
-                      </div>
-                    </button>
-                  ))}
+          {isSharing ? (
+            <div
+              dir={isRTL ? "rtl" : "ltr"}
+              className={`rounded-3xl border-2 overflow-hidden ${
+                isEmergency
+                  ? "border-red-400 bg-red-50 dark:bg-red-950/20"
+                  : batteryLow
+                  ? "border-amber-400 bg-amber-50 dark:bg-amber-950/20"
+                  : "border-[#10B981] bg-emerald-50 dark:bg-emerald-950/20"
+              }`}
+            >
+              {/* Battery low alert banner */}
+              {batteryLow && (
+                <div className={`flex items-center gap-2 px-4 py-2 bg-amber-400/20 border-b border-amber-300 ${isRTL ? "flex-row-reverse" : ""}`}>
+                  <BatteryLow className="w-3.5 h-3.5 text-amber-700 flex-shrink-0" />
+                  <p className="text-[11px] font-bold text-amber-800 dark:text-amber-300 leading-snug">
+                    {ar
+                      ? "⚠️ بطاريتك منخفضة — ابقَ في مكانك ولا تتحرك، تم تنبيه المشرف"
+                      : "⚠️ Low battery — Stay where you are, supervisor has been notified"}
+                  </p>
                 </div>
-              </div>
-              <div className="px-4 pb-4">
-                <button
-                  data-testid="btn-share-live-location"
-                  onClick={startSharing}
-                  className="w-full py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 bg-[#10B981] text-white hover:bg-[#0d9e70] transition-all active:scale-[0.98]"
-                  dir={isRTL ? "rtl" : "ltr"}
-                >
-                  <MapPin className="w-4 h-4 flex-shrink-0" />
-                  {ar ? "مشاركة موقعي مع المشرف" : "Share My Location with Supervisor"}
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="rounded-3xl border-2 border-[#10B981] bg-emerald-50 dark:bg-emerald-950/20 overflow-hidden">
-              {/* Status bar */}
-              <div className="flex items-center justify-between px-5 py-3" dir={isRTL ? "rtl" : "ltr"}>
-                <div className={`flex items-center gap-2.5 ${isRTL ? "flex-row-reverse" : ""}`}>
+              )}
+
+              {/* Main status row */}
+              <div className={`flex items-center justify-between px-4 py-3 ${isRTL ? "flex-row-reverse" : ""}`}>
+                <div className={`flex items-center gap-2.5 min-w-0 ${isRTL ? "flex-row-reverse" : ""}`}>
+                  {/* Pulsing dot */}
                   <span className="relative flex h-3 w-3 flex-shrink-0">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#10B981] opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-[#10B981]"></span>
+                    <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isEmergency ? "bg-red-500" : "bg-[#10B981]"}`} />
+                    <span className={`relative inline-flex rounded-full h-3 w-3 ${isEmergency ? "bg-red-500" : "bg-[#10B981]"}`} />
                   </span>
-                  <div className={isRTL ? "text-right" : ""}>
-                    <p className="text-xs font-bold text-[#10B981]">
-                      {isEmergency
-                        ? (ar ? "⚠ وضع الطوارئ — تحديث كل ٣٠ ثانية" : "⚠ Emergency — updating every 30s")
-                        : ar ? "موقعك يُرسَل دورياً" : "Location sharing active"}
-                    </p>
-                    <p className="text-[10px] text-[#10B981]/70">
+
+                  <div className={`min-w-0 ${isRTL ? "text-right" : ""}`}>
+                    <div className={`flex items-center gap-1.5 flex-wrap ${isRTL ? "flex-row-reverse" : ""}`}>
+                      <p className={`text-xs font-bold ${isEmergency ? "text-red-600 dark:text-red-400" : "text-[#10B981]"}`}>
+                        {isEmergency
+                          ? (ar ? "⚠ وضع الطوارئ — كل ٣٠ ثانية" : "⚠ Emergency — every 30s")
+                          : (ar ? "تتبع الموقع تلقائي" : "Smart location tracking")}
+                      </p>
+                      {!isEmergency && (
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                          motionState === "walking"
+                            ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
+                            : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
+                        }`}>
+                          {motionState === "walking"
+                            ? (ar ? "🚶 يمشي • كل دقيقتين" : "🚶 Walking • 2 min")
+                            : (ar ? "🧍 واقف • كل ١٠ دقائق" : "🧍 Still • 10 min")}
+                        </span>
+                      )}
+                    </div>
+                    <p className={`text-[10px] mt-0.5 ${isEmergency ? "text-red-500/70" : "text-[#10B981]/70"}`}>
                       {ar
-                        ? `التالي خلال: ${countdown >= 60 ? `${Math.floor(countdown / 60)} دقيقة` : `${countdown} ثانية`}${lastAccuracy !== null ? ` · دقة: ${lastAccuracy}م` : ""}`
-                        : `Next in: ${countdown >= 60 ? `${Math.floor(countdown / 60)} min` : `${countdown}s`}${lastAccuracy !== null ? ` · ±${lastAccuracy}m` : ""}`}
+                        ? `التالي: ${countdown >= 60 ? `${Math.floor(countdown / 60)} دقيقة ${countdown % 60 > 0 ? `${countdown % 60} ث` : ""}` : `${countdown} ثانية`}${lastAccuracy !== null ? ` · دقة ${lastAccuracy}م` : ""}`
+                        : `Next: ${countdown >= 60 ? `${Math.floor(countdown / 60)}m ${countdown % 60 > 0 ? `${countdown % 60}s` : ""}` : `${countdown}s`}${lastAccuracy !== null ? ` · ±${lastAccuracy}m` : ""}`}
                     </p>
                   </div>
                 </div>
+
                 <button
                   data-testid="btn-stop-live-location"
                   onClick={stopSharing}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#10B981]/15 text-[#10B981] text-xs font-bold hover:bg-[#10B981]/25 transition-colors"
+                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[10px] font-bold transition-colors flex-shrink-0 ${
+                    isEmergency
+                      ? "bg-red-100 text-red-600 hover:bg-red-200"
+                      : "bg-[#10B981]/15 text-[#10B981] hover:bg-[#10B981]/25"
+                  }`}
                 >
                   <X className="w-3 h-3" />
                   {ar ? "إيقاف" : "Stop"}
                 </button>
               </div>
-              {/* Mode switcher while active */}
-              {!isEmergency && (
-                <div className={`px-5 pb-3 flex gap-2 ${isRTL ? "flex-row-reverse" : ""}`}>
-                  {([
-                    { key: "saver"  as SharingMode, labelAr: "توفير طاقة", labelEn: "Saver",   icon: <BatteryLow className="w-3 h-3" /> },
-                    { key: "normal" as SharingMode, labelAr: "عادي",        labelEn: "Normal",  icon: <MapPin className="w-3 h-3" /> },
-                    { key: "active" as SharingMode, labelAr: "نشط",         labelEn: "Active",  icon: <Zap className="w-3 h-3" /> },
-                  ]).map(m => (
-                    <button
-                      key={m.key}
-                      data-testid={`btn-active-mode-${m.key}`}
-                      onClick={() => changeMode(m.key)}
-                      className={`flex-1 py-1.5 rounded-xl text-[10px] font-bold flex items-center justify-center gap-1 transition-all border ${
-                        sharingMode === m.key
-                          ? "border-[#10B981] bg-[#10B981] text-white"
-                          : "border-[#10B981]/30 bg-white/50 dark:bg-black/20 text-[#10B981]"
-                      }`}
-                    >
-                      {m.icon}
-                      {ar ? m.labelAr : m.labelEn}
-                    </button>
-                  ))}
-                </div>
-              )}
+
               {queueSize > 0 && (
-                <div className={`px-5 pb-3 text-[10px] text-amber-600 font-semibold ${isRTL ? "text-right" : ""}`}>
+                <div className={`px-4 pb-2.5 text-[10px] text-amber-600 font-semibold ${isRTL ? "text-right" : ""}`}>
                   {ar ? `⚠ ${queueSize} تحديث في الانتظار (بدون إنترنت)` : `⚠ ${queueSize} update(s) queued (offline)`}
                 </div>
               )}
             </div>
-          )}
+          ) : geoStatus !== "idle" ? (
+            <div className={`rounded-3xl border border-dashed border-[#10B981]/40 bg-emerald-50/50 dark:bg-emerald-950/10 px-4 py-3 flex items-center gap-3 ${isRTL ? "flex-row-reverse" : ""}`}>
+              <Loader2 className="w-4 h-4 animate-spin text-[#10B981] flex-shrink-0" />
+              <p className={`text-xs text-[#10B981]/70 font-medium ${isRTL ? "text-right" : ""}`}>
+                {ar ? "جاري تفعيل التتبع الذكي للموقع…" : "Starting smart location tracking…"}
+              </p>
+            </div>
+          ) : null}
         </motion.div>
 
         {/* Emergency type modal */}
