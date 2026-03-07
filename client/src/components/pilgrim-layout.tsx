@@ -35,15 +35,9 @@ export function PilgrimLayout({ children }: { children: React.ReactNode }) {
   const SidebarContent = () => (
     <div className="flex flex-col h-full bg-card">
       {/* Logo */}
-      <div className="px-5 py-6 border-b border-border">
-        <Link href="/" className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl overflow-hidden bg-secondary flex-shrink-0">
-            <img src={logoImg} alt="CheckNusuk" className="w-full h-full object-contain" />
-          </div>
-          <div>
-            <div className="font-bold text-primary text-sm">CheckNusuk</div>
-            <div className="text-xs text-muted-foreground">{ar ? "بوابة الحاج" : "Pilgrim Portal"}</div>
-          </div>
+      <div className="py-5 px-4 border-b border-border flex items-center justify-center">
+        <Link href="/" className="font-display font-bold text-xl tracking-tight text-foreground hover:text-primary transition-colors" data-testid="link-home-pilgrim">
+          CheckNusuk
         </Link>
       </div>
 
@@ -110,10 +104,16 @@ export function PilgrimLayout({ children }: { children: React.ReactNode }) {
             {ar ? "🆘 طوارئ SOS" : "🆘 Emergency SOS"}
           </button>
         </Link>
-        {/* Back to supervisor */}
-        <Link href="/dashboard" className="flex items-center gap-2 text-xs text-muted-foreground hover:text-primary transition-colors">
-          <LogOut className="w-3.5 h-3.5" />
-          {ar ? "لوحة المشرف" : "Supervisor Dashboard"}
+        {/* Logout */}
+        <Link href="/">
+          <button
+            onClick={() => setMobileOpen(false)}
+            className="w-full py-2 rounded-2xl text-destructive hover:bg-destructive/10 font-semibold text-sm flex items-center justify-center gap-2 transition-colors"
+            data-testid="btn-logout-pilgrim"
+          >
+            <LogOut className="w-4 h-4" />
+            {ar ? "تسجيل الخروج" : "Logout"}
+          </button>
         </Link>
       </div>
     </div>

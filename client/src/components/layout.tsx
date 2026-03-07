@@ -1,12 +1,11 @@
 import { Link, useLocation } from "wouter";
 import {
   Activity, Users, ShieldAlert, AlertTriangle,
-  Map, Languages, Settings, Bell, Menu, X, Box, ChevronLeft, ChevronRight, MessageSquare
+  Map, Languages, Settings, Bell, Menu, X, Box, ChevronLeft, ChevronRight, MessageSquare, LogOut
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage } from "@/contexts/language-context";
-import logoImg from "@assets/WhatsApp_Image_2026-03-07_at_12.53.20_AM_1772834050515.jpeg";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
@@ -78,22 +77,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
         style={{ willChange: "transform" }}
       >
         {/* Logo area */}
-        <div className={`p-5 flex items-center justify-between border-b border-border/50 ${isRTL ? "flex-row-reverse" : ""}`}>
-          <Link href="/" className={`flex items-center gap-3 group ${isRTL ? "flex-row-reverse" : ""}`}>
-            <div className="w-11 h-11 rounded-xl overflow-hidden shadow-lg flex-shrink-0 bg-[#f5e6c8]">
-              <img src={logoImg} alt="CheckNusuk Logo" className="w-full h-full object-contain" />
-            </div>
-            <div className={isRTL ? "text-right" : ""}>
-              <h1 className="font-bold text-lg leading-none tracking-tight">CheckNusuk</h1>
-              <p className="text-xs text-muted-foreground font-medium mt-0.5">{t("controlCenter")}</p>
-            </div>
+        <div className="relative py-5 px-4 flex items-center justify-center border-b border-border/50">
+          <Link href="/" className="font-display font-bold text-xl tracking-tight text-foreground hover:text-primary transition-colors" data-testid="link-home-admin">
+            CheckNusuk
           </Link>
           <button
             onClick={() => setSidebarOpen(false)}
-            className="p-1.5 rounded-lg hover:bg-secondary transition-colors text-muted-foreground"
+            className={`absolute top-1/2 -translate-y-1/2 ${isRTL ? "left-3" : "right-3"} p-1.5 rounded-lg hover:bg-secondary transition-colors text-muted-foreground`}
             data-testid="button-sidebar-close"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
@@ -124,17 +117,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </nav>
 
         {/* Bottom */}
-        <div className={`p-3 border-t border-border ${isRTL ? "text-right" : ""}`}>
-          <Link href="/pilgrim">
-            <div className={`flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors ${isRTL ? "flex-row-reverse" : ""}`}>
-              <Users className="w-5 h-5 opacity-70 flex-shrink-0" />
-              <span className="font-medium">{lang === "ar" ? "بوابة الحاج" : "Pilgrim Portal"}</span>
-            </div>
-          </Link>
+        <div className="p-3 border-t border-border space-y-1">
           <div className={`flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors ${isRTL ? "flex-row-reverse" : ""}`}>
             <Settings className="w-5 h-5 opacity-70 flex-shrink-0" />
             <span className="font-medium">{t("settings")}</span>
           </div>
+          <Link href="/">
+            <div className={`flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer text-destructive hover:bg-destructive/10 transition-colors ${isRTL ? "flex-row-reverse" : ""}`}>
+              <LogOut className="w-5 h-5 flex-shrink-0" />
+              <span className="font-medium">{lang === "ar" ? "تسجيل الخروج" : "Logout"}</span>
+            </div>
+          </Link>
         </div>
       </motion.aside>
 
