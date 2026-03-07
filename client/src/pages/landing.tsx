@@ -55,21 +55,10 @@ export function LandingPage() {
         {/* Hero content — centered */}
         <div className="relative h-full flex flex-col items-center justify-center text-center px-6 pt-16">
 
-          {/* Main heading */}
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.55, delay: 0.05 }}
-            className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-display font-extrabold text-white leading-[1.15] tracking-tight drop-shadow-lg"
-          >
-            {ar
-              ? <><span className="text-emerald-400">حج آمن</span> ومنظّم<br />بالذكاء الاصطناعي</>
-              : <>Ensuring a <span className="text-emerald-400">Safe &amp; Seamless</span><br />Pilgrimage</>
-            }
-          </motion.h1>
-
-          {/* Badge — below heading */}
+          {/* Badge — above heading */}
           <motion.div
-            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: 0.18 }}
-            className="mt-4 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/15 backdrop-blur-sm text-white border border-white/25 text-[12px] font-bold"
+            initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}
+            className="mb-6 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/15 backdrop-blur-sm text-white border border-white/25 text-[12px] font-bold"
           >
             <span className="relative flex h-2 w-2 flex-shrink-0">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
@@ -77,6 +66,17 @@ export function LandingPage() {
             </span>
             {ar ? "نظام الحج الذكي 1446 — متاح الآن" : "Hajj Smart System 1446 — Live Now"}
           </motion.div>
+
+          {/* Main heading */}
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.55, delay: 0.1 }}
+            className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-display font-extrabold text-white leading-[1.15] tracking-tight drop-shadow-lg"
+          >
+            {ar
+              ? <><span className="text-emerald-400">حج آمن</span> ومنظّم<br />بالذكاء الاصطناعي</>
+              : <>Ensuring a <span className="text-emerald-400">Safe &amp; Seamless</span><br />Pilgrimage</>
+            }
+          </motion.h1>
 
           {/* Sub-text */}
           <motion.p
