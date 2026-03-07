@@ -133,6 +133,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
               localStorage.removeItem("username");
               localStorage.removeItem("supervisorNameAr");
               localStorage.removeItem("supervisorNameEn");
+              localStorage.removeItem("supervisorRoleAr");
+              localStorage.removeItem("supervisorRoleEn");
               window.location.replace("/");
             }}
             data-testid="btn-logout-supervisor"
@@ -207,14 +209,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
             {(() => {
               const nameAr = localStorage.getItem("supervisorNameAr") || t("adminSupervisor");
               const nameEn = localStorage.getItem("supervisorNameEn") || t("adminSupervisor");
+              const roleAr = localStorage.getItem("supervisorRoleAr") || "المشرف";
+              const roleEn = localStorage.getItem("supervisorRoleEn") || "Supervisor";
               const displayName = lang === "ar" ? nameAr : nameEn;
+              const displayRole = lang === "ar" ? roleAr : roleEn;
               const initials = nameEn.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
               return (
                 <>
                   <div className={`hidden sm:flex items-center gap-2 ${isRTL ? "flex-row-reverse" : ""}`}>
                     <div className={isRTL ? "text-right" : "text-right"}>
                       <p className="text-xs font-bold text-foreground leading-tight">
-                        <span className="text-muted-foreground font-normal">{lang === "ar" ? "المشرف: " : "Supervisor: "}</span>{displayName}
+                        <span className="text-muted-foreground font-normal">{displayRole}: </span>{displayName}
                       </p>
                       <p className="text-[10px] text-muted-foreground">{t("sector")}</p>
                     </div>

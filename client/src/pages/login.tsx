@@ -6,8 +6,8 @@ import { useLanguage } from "@/contexts/language-context";
 import logoImg from "@assets/WhatsApp_Image_2026-03-07_at_12.53.20_AM_1772834050515.jpeg";
 
 const SUPERVISOR_CREDENTIALS = [
-  { username: "admin",       password: "nusuk2026", nameAr: "محمد عبدالله",   nameEn: "Muhammad Abdullah" },
-  { username: "supervisor1", password: "hajj1447",  nameAr: "سارة المطيري",  nameEn: "Sara Al-Mutairi"   },
+  { username: "admin",       password: "nusuk2026", nameAr: "محمد عبدالله",  nameEn: "Muhammad Abdullah", roleAr: "المشرف",      roleEn: "Supervisor"         },
+  { username: "supervisor1", password: "hajj1447",  nameAr: "سارة المطيري", nameEn: "Sara Al-Mutairi",   roleAr: "المشرف العام", roleEn: "General Supervisor" },
 ];
 
 export function LoginPage() {
@@ -53,6 +53,8 @@ export function LoginPage() {
         localStorage.setItem("username", supUsername.trim().toLowerCase());
         localStorage.setItem("supervisorNameAr", match.nameAr);
         localStorage.setItem("supervisorNameEn", match.nameEn);
+        localStorage.setItem("supervisorRoleAr", match.roleAr);
+        localStorage.setItem("supervisorRoleEn", match.roleEn);
         navigate("/dashboard");
       } else {
         setError(ar ? "اسم المستخدم أو كلمة المرور غير صحيحة" : "Invalid username or password");
