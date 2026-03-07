@@ -180,7 +180,7 @@ export function PilgrimsPage() {
                         className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary font-semibold text-sm transition-colors ${isRTL ? "flex-row-reverse" : ""}`}
                       >
                         <Eye className="w-4 h-4" />
-                        {t("close").replace("Close", "View")}
+                        {t("viewPilgrim")}
                       </button>
                     </td>
                   </motion.tr>

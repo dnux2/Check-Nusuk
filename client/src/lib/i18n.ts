@@ -15,6 +15,7 @@ export const translations = {
     translator: "AI Translator",
     settings: "Settings",
     controlCenter: "Control Center",
+    chat: "Messages",
 
     // Header
     adminSupervisor: "Admin Supervisor",
@@ -43,12 +44,13 @@ export const translations = {
     lastUpdated: "Last Updated",
     currentLocation: "Current Location",
     unknown: "Unknown",
+    viewPilgrim: "View",
 
     // Pilgrim Profile Popup
     pilgrimProfile: "Pilgrim Information",
     pilgrimInformation: "معلومات الحاج",
     trackRoute: "Track Route",
-    sendMessage: "Send Message",
+    sendMessage: "Message",
     close: "Close",
     profileImageAlt: "Pilgrim Profile",
     valid: "Valid",
@@ -63,23 +65,6 @@ export const translations = {
     activeAlerts: "Active Alerts",
     emergencies: "Emergencies",
     registeredToday: "Registered Today",
-
-    // Emergency
-    panicButton: "Send Emergency Alert",
-    panicButtonDesc: "Press if you or a pilgrim requires immediate assistance.",
-    activeEmergencies: "Active Emergencies",
-    noEmergencies: "No active emergencies.",
-
-    // Translator
-    aiTranslator: "AI Translator",
-    sourceText: "Enter text to translate",
-    translatedText: "Translated Text",
-    translate: "Translate",
-    selectLanguage: "Select Target Language",
-    translating: "Translating...",
-    translationResult: "Translation Result",
-
-    // Dashboard
     overviewTitle: "Overview",
     systemStatus: "System status across all sectors.",
     allSystemsNominal: "All Systems Nominal",
@@ -87,7 +72,7 @@ export const translations = {
     activeEmergenciesCard: "Active Emergencies",
     securityAlerts: "Security Alerts",
     avgCrowdDensity: "Avg Crowd Density",
-    liveSectorMap: "Live Sector Map",
+    liveSectorMap: "Live Hajj Sites Map",
     crowdDensityTrend: "Crowd Density Trend",
     recentAlerts: "Recent Alerts",
     justNow: "Just now",
@@ -97,6 +82,54 @@ export const translations = {
     congestionWarning: "Congestion Warning",
     congestionDesc: "Sector 4 (Jamarat Bridge) is approaching 85% capacity. Predictive AI suggests redirecting Group A to Sector 5.",
     layers: "Layers",
+
+    // Emergency page (supervisor view — no SOS button)
+    emergencyResponseTitle: "Emergency Response",
+    emergencyResponseDesc: "Monitor and manage active emergency requests from pilgrims.",
+    activeEmergenciesTitle: "Active Emergencies",
+    noActiveEmergencies: "No active emergencies at this time.",
+    markResolved: "Mark Resolved",
+    resolved: "Resolved",
+    pilgrimIdLabel: "Pilgrim ID",
+
+    // Services
+    pilgrimServicesTitle: "Pilgrim Services",
+    applyForPermit: "Apply for Permit",
+    bookTransport: "Book Transport",
+    hajjPermitApp: "Hajj Permit Application",
+    transportBooking: "Transport Booking",
+    completeFormPermit: "Complete this form to apply for your official Nusuk permit.",
+    reserveSeatBus: "Reserve a seat on the inter-sector smart buses.",
+    requestSubmitted: "Request Submitted",
+    smsConfirmation: "You will receive an SMS confirmation shortly.",
+    submitRequest: "Submit Request",
+    passportNumberLabel: "Passport Number",
+    passportPlaceholder: "Enter passport number",
+    visaTypeLabel: "Visa Type",
+    hajjVisa: "Hajj Visa",
+    umrahVisa: "Umrah Visa",
+    resident: "Resident",
+    fromLabel: "From",
+    toLabel: "To",
+    grandMosqueOpt: "Grand Mosque",
+    minaOpt: "Mina",
+    arafatOpt: "Arafat",
+    jamaratOpt: "Jamarat",
+
+    // Chat
+    supervisorChat: "Supervisor Messaging",
+    supervisorChatDesc: "Send messages to pilgrims and manage group announcements.",
+    pilgrimChatTab: "Messages",
+    typeMessage: "Type a message...",
+    send: "Send",
+    noMessages: "No messages yet.",
+    sendingTo: "Sending to",
+    allPilgrimsLabel: "All Pilgrims (Broadcast)",
+    selectPilgrim: "Select pilgrim",
+    supervisorLabel: "Supervisor",
+    pilgrimLabel: "Pilgrim",
+    broadcastAnnouncement: "Broadcast Announcement",
+    messageSent: "Message sent",
   },
   ar: {
     // Nav
@@ -112,6 +145,7 @@ export const translations = {
     translator: "المترجم الذكي",
     settings: "الإعدادات",
     controlCenter: "مركز التحكم",
+    chat: "الرسائل",
 
     // Header
     adminSupervisor: "المشرف العام",
@@ -140,12 +174,13 @@ export const translations = {
     lastUpdated: "آخر تحديث",
     currentLocation: "الموقع الحالي",
     unknown: "غير معروف",
+    viewPilgrim: "عرض",
 
     // Pilgrim Profile Popup
     pilgrimProfile: "معلومات الحاج",
     pilgrimInformation: "Pilgrim Information",
-    trackRoute: "تتبع المسار",
-    sendMessage: "إرسال رسالة",
+    trackRoute: "تتبع الموقع",
+    sendMessage: "رسالة",
     close: "إغلاق",
     profileImageAlt: "صورة الحاج",
     valid: "ساري",
@@ -160,23 +195,6 @@ export const translations = {
     activeAlerts: "التنبيهات النشطة",
     emergencies: "حالات الطوارئ",
     registeredToday: "مسجل اليوم",
-
-    // Emergency
-    panicButton: "إرسال تنبيه طارئ",
-    panicButtonDesc: "اضغط إذا كنت أو أحد الحجاج بحاجة لمساعدة فورية.",
-    activeEmergencies: "حالات الطوارئ النشطة",
-    noEmergencies: "لا توجد حالات طوارئ نشطة.",
-
-    // Translator
-    aiTranslator: "المترجم الذكي",
-    sourceText: "أدخل النص للترجمة",
-    translatedText: "النص المترجم",
-    translate: "ترجمة",
-    selectLanguage: "اختر اللغة المستهدفة",
-    translating: "جارٍ الترجمة...",
-    translationResult: "نتيجة الترجمة",
-
-    // Dashboard
     overviewTitle: "نظرة عامة",
     systemStatus: "حالة النظام عبر جميع القطاعات.",
     allSystemsNominal: "جميع الأنظمة تعمل بشكل طبيعي",
@@ -194,6 +212,54 @@ export const translations = {
     congestionWarning: "تحذير من الازدحام",
     congestionDesc: "القطاع 4 (جسر الجمرات) يقترب من 85% من طاقته. يقترح الذكاء الاصطناعي إعادة توجيه المجموعة أ إلى القطاع 5.",
     layers: "الطبقات",
+
+    // Emergency page (supervisor view — no SOS button)
+    emergencyResponseTitle: "إدارة الطوارئ",
+    emergencyResponseDesc: "متابعة وإدارة طلبات الطوارئ الواردة من الحجاج.",
+    activeEmergenciesTitle: "حالات الطوارئ النشطة",
+    noActiveEmergencies: "لا توجد حالات طوارئ نشطة حالياً.",
+    markResolved: "تأكيد المعالجة",
+    resolved: "تمت المعالجة",
+    pilgrimIdLabel: "رقم الحاج",
+
+    // Services
+    pilgrimServicesTitle: "خدمات الحجاج",
+    applyForPermit: "طلب تصريح",
+    bookTransport: "حجز مواصلات",
+    hajjPermitApp: "طلب تصريح الحج",
+    transportBooking: "حجز مواصلات",
+    completeFormPermit: "أكمل هذا النموذج للتقدم للحصول على تصريح نسك الرسمي.",
+    reserveSeatBus: "احجز مقعدك في حافلات القطاعات الذكية.",
+    requestSubmitted: "تم إرسال الطلب",
+    smsConfirmation: "ستصلك رسالة تأكيد قريباً.",
+    submitRequest: "إرسال الطلب",
+    passportNumberLabel: "رقم جواز السفر",
+    passportPlaceholder: "أدخل رقم الجواز",
+    visaTypeLabel: "نوع التأشيرة",
+    hajjVisa: "تأشيرة حج",
+    umrahVisa: "تأشيرة عمرة",
+    resident: "مقيم",
+    fromLabel: "من",
+    toLabel: "إلى",
+    grandMosqueOpt: "المسجد الحرام",
+    minaOpt: "منى",
+    arafatOpt: "عرفات",
+    jamaratOpt: "الجمرات",
+
+    // Chat
+    supervisorChat: "مراسلة الحجاج",
+    supervisorChatDesc: "إرسال رسائل للحجاج وإدارة الإعلانات الجماعية.",
+    pilgrimChatTab: "الرسائل",
+    typeMessage: "اكتب رسالة...",
+    send: "إرسال",
+    noMessages: "لا توجد رسائل بعد.",
+    sendingTo: "إرسال إلى",
+    allPilgrimsLabel: "جميع الحجاج (إذاعة)",
+    selectPilgrim: "اختر الحاج",
+    supervisorLabel: "المشرف",
+    pilgrimLabel: "حاج",
+    broadcastAnnouncement: "إعلان جماعي",
+    messageSent: "تم إرسال الرسالة",
   },
 };
 

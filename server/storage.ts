@@ -3,14 +3,17 @@ import {
   pilgrims,
   emergencies,
   alerts,
+  chatMessages,
   type Pilgrim,
   type InsertPilgrim,
   type Emergency,
   type InsertEmergency,
   type Alert,
-  type InsertAlert
+  type InsertAlert,
+  type ChatMessage,
+  type InsertChatMessage,
 } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { eq, or, isNull } from "drizzle-orm";
 
 export interface IStorage {
   // Pilgrims
@@ -18,15 +21,19 @@ export interface IStorage {
   getPilgrim(id: number): Promise<Pilgrim | undefined>;
   createPilgrim(pilgrim: InsertPilgrim): Promise<Pilgrim>;
   updatePilgrimLocation(id: number, lat: number, lng: number): Promise<Pilgrim>;
-  
+
   // Emergencies
   getEmergencies(): Promise<Emergency[]>;
   createEmergency(emergency: InsertEmergency): Promise<Emergency>;
   resolveEmergency(id: number): Promise<Emergency>;
-  
+
   // Alerts
   getAlerts(): Promise<Alert[]>;
   createAlert(alert: InsertAlert): Promise<Alert>;
+
+  // Chat
+  getChatMessages(pilgrimId?: number): Promise<ChatMessage[]>;
+  createChatMessage(msg: InsertChatMessage): Promise<ChatMessage>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -60,7 +67,6 @@ export class DatabaseStorage implements IStorage {
 
   async createEmergency(emergency: InsertEmergency): Promise<Emergency> {
     const [newEmergency] = await db.insert(emergencies).values(emergency).returning();
-    // Mark pilgrim as having emergency
     if (emergency.pilgrimId) {
       await db.update(pilgrims)
         .set({ emergencyStatus: true })
@@ -71,17 +77,16 @@ export class DatabaseStorage implements IStorage {
 
   async resolveEmergency(id: number): Promise<Emergency> {
     const [resolved] = await db.update(emergencies)
-      .set({ status: 'Resolved' })
+      .set({ status: "Resolved" })
       .where(eq(emergencies.id, id))
       .returning();
-      
+
     if (resolved && resolved.pilgrimId) {
-      // Check if they have other active emergencies
       const activeEmergencies = await db.select()
         .from(emergencies)
         .where(eq(emergencies.pilgrimId, resolved.pilgrimId));
-        
-      if (!activeEmergencies.some(e => e.status === 'Active')) {
+
+      if (!activeEmergencies.some(e => e.status === "Active")) {
         await db.update(pilgrims)
           .set({ emergencyStatus: false })
           .where(eq(pilgrims.id, resolved.pilgrimId));
@@ -98,6 +103,23 @@ export class DatabaseStorage implements IStorage {
   async createAlert(alert: InsertAlert): Promise<Alert> {
     const [newAlert] = await db.insert(alerts).values(alert).returning();
     return newAlert;
+  }
+
+  // Chat
+  async getChatMessages(pilgrimId?: number): Promise<ChatMessage[]> {
+    if (pilgrimId !== undefined) {
+      // For a specific pilgrim: return messages addressed to them + broadcast messages (null pilgrimId)
+      return await db.select().from(chatMessages).where(
+        or(eq(chatMessages.pilgrimId, pilgrimId), isNull(chatMessages.pilgrimId))
+      );
+    }
+    // Supervisor: return all messages
+    return await db.select().from(chatMessages);
+  }
+
+  async createChatMessage(msg: InsertChatMessage): Promise<ChatMessage> {
+    const [newMsg] = await db.insert(chatMessages).values(msg).returning();
+    return newMsg;
   }
 }
 

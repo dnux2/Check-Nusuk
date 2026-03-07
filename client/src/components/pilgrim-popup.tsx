@@ -4,6 +4,7 @@ import { type Pilgrim } from "@shared/schema";
 import { useLanguage } from "@/contexts/language-context";
 import { format } from "date-fns";
 import { createPortal } from "react-dom";
+import { useLocation } from "wouter";
 
 interface PilgrimPopupProps {
   pilgrim: Pilgrim | null;
@@ -37,6 +38,7 @@ function InfoRow({
 
 export function PilgrimPopup({ pilgrim, onClose }: PilgrimPopupProps) {
   const { t, isRTL } = useLanguage();
+  const [, navigate] = useLocation();
 
   if (!pilgrim) return null;
 
@@ -67,6 +69,16 @@ export function PilgrimPopup({ pilgrim, onClose }: PilgrimPopupProps) {
     .slice(0, 2)
     .join("")
     .toUpperCase();
+
+  const handleTrackRoute = () => {
+    onClose();
+    navigate("/crowd-management");
+  };
+
+  const handleSendMessage = () => {
+    onClose();
+    navigate(`/chat?pilgrimId=${pilgrim.id}`);
+  };
 
   return createPortal(
     <AnimatePresence>
@@ -99,7 +111,6 @@ export function PilgrimPopup({ pilgrim, onClose }: PilgrimPopupProps) {
             </button>
 
             <div className={`flex items-center gap-4 ${isRTL ? "flex-row-reverse" : ""}`}>
-              {/* Avatar */}
               <div className="w-16 h-16 rounded-2xl bg-white/20 border-2 border-white/40 flex items-center justify-center shadow-lg flex-shrink-0">
                 <span className="text-white font-display font-bold text-2xl">{initials}</span>
               </div>
@@ -152,14 +163,16 @@ export function PilgrimPopup({ pilgrim, onClose }: PilgrimPopupProps) {
           <div className={`px-6 pb-6 flex gap-3 ${isRTL ? "flex-row-reverse" : ""}`}>
             <button
               data-testid="button-track-route"
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-primary text-primary-foreground font-bold rounded-xl shadow-md shadow-primary/25 transition-all"
+              onClick={handleTrackRoute}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-primary text-primary-foreground font-bold rounded-xl shadow-md shadow-primary/25 hover:bg-primary/90 transition-all"
             >
               <Navigation className="w-4 h-4" />
               {t("trackRoute")}
             </button>
             <button
               data-testid="button-send-message"
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-secondary text-secondary-foreground font-bold rounded-xl transition-all"
+              onClick={handleSendMessage}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-secondary text-secondary-foreground font-bold rounded-xl hover:bg-secondary/80 transition-all border border-border"
             >
               <MessageSquare className="w-4 h-4" />
               {t("sendMessage")}

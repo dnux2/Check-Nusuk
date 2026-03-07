@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import {
   Activity, Users, ShieldAlert, AlertTriangle,
-  Map, Languages, Settings, Bell, Menu, X, Box, ChevronLeft, ChevronRight
+  Map, Languages, Settings, Bell, Menu, X, Box, ChevronLeft, ChevronRight, MessageSquare
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -32,6 +32,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { href: "/crowd-management", label: t("crowdMonitoring"), icon: Map },
     { href: "/security", label: t("securityAI"), icon: ShieldAlert },
     { href: "/emergencies", label: t("emergency"), icon: AlertTriangle },
+    { href: "/chat", label: t("chat"), icon: MessageSquare },
     { href: "/services", label: t("services"), icon: Box },
     { href: "/translator", label: t("translator"), icon: Languages },
   ];

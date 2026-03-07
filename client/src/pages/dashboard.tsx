@@ -1,5 +1,5 @@
 import { StatCard } from "@/components/stat-card";
-import { HajjMap } from "@/components/hajj-map";
+import { RealMap } from "@/components/real-map";
 import { Users, AlertTriangle, ShieldAlert, Activity } from "lucide-react";
 import { usePilgrims } from "@/hooks/use-pilgrims";
 import { useEmergencies } from "@/hooks/use-emergencies";
@@ -16,6 +16,14 @@ const mockChartData = [
   { time: "16:00", crowd: 15000 },
   { time: "20:00", crowd: 9000 },
   { time: "23:59", crowd: 5000 },
+];
+
+const DASHBOARD_SECTORS = [
+  { id: "S1", load: 76, status: "Busy" },
+  { id: "S2", load: 20, status: "Empty" },
+  { id: "S3", load: 15, status: "Empty" },
+  { id: "S4", load: 88, status: "Warning" },
+  { id: "S5", load: 72, status: "Busy" },
 ];
 
 export function Dashboard() {
@@ -56,9 +64,9 @@ export function Dashboard() {
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
           className="lg:col-span-2 bg-card rounded-2xl border border-border/50 shadow-sm p-6 flex flex-col"
         >
-          <h2 className={`text-xl font-display font-bold mb-6 ${isRTL ? "text-right" : ""}`}>{t("liveSectorMap")}</h2>
-          <div className="flex-1 min-h-[400px]">
-            <HajjMap pilgrims={pilgrims} />
+          <h2 className={`text-xl font-display font-bold mb-4 ${isRTL ? "text-right" : ""}`}>{t("liveSectorMap")}</h2>
+          <div className="flex-1 min-h-[420px] rounded-xl overflow-hidden">
+            <RealMap pilgrims={pilgrims} sectorData={DASHBOARD_SECTORS} />
           </div>
         </motion.div>
 

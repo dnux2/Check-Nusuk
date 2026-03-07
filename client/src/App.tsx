@@ -16,6 +16,7 @@ import { EmergenciesPage } from "@/pages/emergencies";
 import { ServicesPage } from "@/pages/services";
 import { TranslatorPage } from "@/pages/translator";
 import { PilgrimPortalPage } from "@/pages/pilgrim-portal";
+import { ChatPage } from "@/pages/chat";
 
 function Router() {
   return (
@@ -30,6 +31,7 @@ function Router() {
         <Route path="/emergencies" component={EmergenciesPage} />
         <Route path="/services" component={ServicesPage} />
         <Route path="/translator" component={TranslatorPage} />
+        <Route path="/chat" component={ChatPage} />
         <Route component={NotFound} />
       </Switch>
     </Layout>

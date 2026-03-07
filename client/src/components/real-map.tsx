@@ -239,16 +239,10 @@ export function RealMap({ pilgrims, sectorData, onZoneClick }: RealMapProps) {
               }}
               eventHandlers={{ click: () => handleZoneClick(zone) }}
             >
-              <Tooltip
-                permanent
-                direction="center"
-                offset={[0, 0]}
-                className="leaflet-zone-label"
-                opacity={1}
-              >
-                <div style={{ background: "rgba(0,0,0,0.8)", color: "#fff", padding: "2px 8px", borderRadius: 6, border: `1px solid ${stroke}`, fontSize: 11, fontWeight: 700, fontFamily: "monospace", whiteSpace: "nowrap" }}>
+              <Tooltip direction="top" offset={[0, -6]} opacity={0.95}>
+                <span style={{ fontWeight: 700, fontSize: 12 }}>
                   {ar ? zone.nameAr : zone.nameEn}
-                </div>
+                </span>
               </Tooltip>
             </Circle>
           );

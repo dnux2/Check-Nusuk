@@ -1,12 +1,15 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link } from "wouter";
-import { motion } from "framer-motion";
-import { AlertTriangle, Languages, MapPin, Phone, Shield, ArrowRight, Globe, Mic, MicOff, ArrowRightLeft, Volume2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { AlertTriangle, Languages, MapPin, Phone, Shield, ArrowRight, Mic, MicOff, ArrowRightLeft, Volume2, MessageSquare, Send } from "lucide-react";
 import { useCreateEmergency } from "@/hooks/use-emergencies";
 import { useTranslate } from "@/hooks/use-ai";
 import { useLanguage } from "@/contexts/language-context";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { type ChatMessage } from "@shared/schema";
+import { format } from "date-fns";
 import logoImg from "@assets/WhatsApp_Image_2026-03-07_at_12.53.20_AM_1772834050515.jpeg";
-import { useRef, useEffect } from "react";
 
 const LANGUAGES = ["Arabic", "English", "Urdu", "French", "Malay", "Indonesian", "Turkish", "Bengali"];
 
@@ -25,8 +28,39 @@ export function PilgrimPortalPage() {
   const [text, setText] = useState("");
   const [targetLanguage, setTargetLanguage] = useState("Arabic");
   const [isListening, setIsListening] = useState(false);
-  const [activeTab, setActiveTab] = useState<"home" | "translator">("home");
+  const [activeTab, setActiveTab] = useState<"home" | "translator" | "chat">("home");
+  const [chatInput, setChatInput] = useState("");
+  const chatBottomRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+
+  // Chat — pilgrim ID 1 is the mock active pilgrim
+  const PILGRIM_ID = 1;
+  const { data: chatMessages = [] } = useQuery<ChatMessage[]>({
+    queryKey: ["/api/chat/messages"],
+    refetchInterval: 3000,
+  });
+  const myMessages = chatMessages.filter(
+    (m) => m.pilgrimId === PILGRIM_ID || m.pilgrimId === null
+  );
+
+  const sendChatMsg = useMutation({
+    mutationFn: (msg: { message: string; pilgrimId: number; senderRole: string }) =>
+      apiRequest("POST", "/api/chat/messages", msg),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/chat/messages"] });
+      setChatInput("");
+    },
+  });
+
+  useEffect(() => {
+    chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [myMessages]);
+
+  const handleChatSend = () => {
+    const trimmed = chatInput.trim();
+    if (!trimmed) return;
+    sendChatMsg.mutate({ message: trimmed, pilgrimId: PILGRIM_ID, senderRole: "pilgrim" });
+  };
 
   const ar = lang === "ar";
 
@@ -94,6 +128,14 @@ export function PilgrimPortalPage() {
           className={`flex-1 py-3 text-sm font-bold transition-colors ${activeTab === "home" ? "border-b-2 border-primary text-primary" : "text-muted-foreground"}`}
         >
           {ar ? "الرئيسية" : "Home"}
+        </button>
+        <button
+          onClick={() => setActiveTab("chat")}
+          className={`flex-1 py-3 text-sm font-bold transition-colors flex items-center justify-center gap-2 ${activeTab === "chat" ? "border-b-2 border-primary text-primary" : "text-muted-foreground"}`}
+          data-testid="tab-pilgrim-chat"
+        >
+          <MessageSquare className="w-4 h-4" />
+          {ar ? "الرسائل" : "Messages"}
         </button>
         <button
           onClick={() => setActiveTab("translator")}
@@ -230,6 +272,78 @@ export function PilgrimPortalPage() {
               </div>
               <ArrowRight className={`w-5 h-5 ${isRTL ? "rotate-180" : ""}`} />
             </motion.button>
+          </div>
+        )}
+
+        {activeTab === "chat" && (
+          <div className="max-w-xl mx-auto flex flex-col h-full" style={{ height: "calc(100vh - 130px)" }}>
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {myMessages.length === 0 && (
+                <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-3 py-16">
+                  <MessageSquare className="w-12 h-12 opacity-20" />
+                  <p className="font-medium">{ar ? "لا توجد رسائل بعد" : "No messages yet"}</p>
+                </div>
+              )}
+              <AnimatePresence initial={false}>
+                {myMessages.map((msg) => {
+                  const isSupervisor = msg.senderRole === "supervisor";
+                  const isBroadcast = msg.pilgrimId === null;
+                  return (
+                    <motion.div
+                      key={msg.id}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className={`flex gap-2 ${isSupervisor || isBroadcast ? (isRTL ? "flex-row-reverse" : "flex-row") : (isRTL ? "flex-row" : "flex-row-reverse")}`}
+                    >
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0 ${isSupervisor || isBroadcast ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"}`}>
+                        {isSupervisor || isBroadcast ? "م" : "ح"}
+                      </div>
+                      <div className={`max-w-[75%] flex flex-col gap-1 ${isSupervisor || isBroadcast ? (isRTL ? "items-start" : "items-end") : (isRTL ? "items-end" : "items-start")}`}>
+                        <p className="text-[10px] text-muted-foreground font-medium">
+                          {isBroadcast ? (ar ? "إعلان عام 📢" : "Broadcast 📢") : isSupervisor ? (ar ? "المشرف" : "Supervisor") : (ar ? "أنت" : "You")}
+                        </p>
+                        <div className={`px-4 py-2.5 rounded-2xl text-sm font-medium leading-relaxed ${
+                          isSupervisor || isBroadcast
+                            ? "bg-primary text-primary-foreground rounded-ee-sm"
+                            : "bg-card border border-border text-foreground rounded-es-sm"
+                        }`}>
+                          {msg.message}
+                        </div>
+                        <p className="text-[10px] text-muted-foreground">
+                          {msg.timestamp ? format(new Date(msg.timestamp), "HH:mm") : ""}
+                        </p>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
+              <div ref={chatBottomRef} />
+            </div>
+
+            <div className={`p-4 border-t border-border bg-card flex items-end gap-3 ${isRTL ? "flex-row-reverse" : ""}`}>
+              <div className="flex-1 relative">
+                <textarea
+                  rows={1}
+                  value={chatInput}
+                  onChange={e => setChatInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleChatSend(); }}}
+                  placeholder={ar ? "اكتب رسالة للمشرف..." : "Message supervisor..."}
+                  dir={isRTL ? "rtl" : "ltr"}
+                  data-testid="input-pilgrim-chat-message"
+                  className={`w-full resize-none rounded-xl border-2 border-border bg-background px-4 py-3 text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all ${isRTL ? "text-right" : ""}`}
+                  style={{ minHeight: 48 }}
+                />
+              </div>
+              <button
+                onClick={handleChatSend}
+                disabled={!chatInput.trim() || sendChatMsg.isPending}
+                data-testid="button-pilgrim-chat-send"
+                className={`h-12 px-4 bg-primary text-primary-foreground rounded-xl font-bold flex items-center gap-2 disabled:opacity-50 hover:bg-primary/90 transition-colors flex-shrink-0 ${isRTL ? "flex-row-reverse" : ""}`}
+              >
+                <Send className="w-4 h-4" />
+                {ar ? "إرسال" : "Send"}
+              </button>
+            </div>
           </div>
         )}
 

@@ -5,9 +5,13 @@
 CheckNusuk is a modern web application inspired by the Saudi Nusuk (nusuk.sa) platform. It provides two core capabilities:
 
 1. **Pilgrim Services** – Hajj/Umrah permit applications, transport booking, and pilgrim registry management.
-2. **Smart Crowd Management** – AI-powered real-time crowd monitoring, security alerts, emergency response, and a field translator for multilingual communication.
+2. **Smart Crowd Management** – AI-powered real-time crowd monitoring, security alerts, emergency response, field translator, and supervisor↔pilgrim chat/messaging.
 
 The platform targets Hajj supervisors and administrators who need a unified control center for tracking pilgrims, managing emergencies, and monitoring crowd density across sectors.
+
+**Two portals:**
+- **Admin/Supervisor portal** (`/dashboard` and all sidebar routes)
+- **Pilgrim portal** (`/pilgrim`) — standalone page with Home, Messages, Translator tabs
 
 ---
 

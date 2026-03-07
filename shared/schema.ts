@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, doublePrecision, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, doublePrecision, boolean, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -36,9 +36,18 @@ export const alerts = pgTable("alerts", {
   timestamp: timestamp("timestamp").defaultNow(),
 });
 
+export const chatMessages = pgTable("chat_messages", {
+  id: serial("id").primaryKey(),
+  pilgrimId: integer("pilgrim_id"), // null = broadcast to all pilgrims
+  senderRole: text("sender_role").notNull(), // 'supervisor' | 'pilgrim'
+  message: text("message").notNull(),
+  timestamp: timestamp("timestamp").defaultNow(),
+});
+
 export const insertPilgrimSchema = createInsertSchema(pilgrims).omit({ id: true, lastUpdated: true });
 export const insertEmergencySchema = createInsertSchema(emergencies).omit({ id: true, timestamp: true });
 export const insertAlertSchema = createInsertSchema(alerts).omit({ id: true, timestamp: true });
+export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({ id: true, timestamp: true });
 
 // Types
 export type Pilgrim = typeof pilgrims.$inferSelect;
@@ -49,3 +58,6 @@ export type InsertEmergency = z.infer<typeof insertEmergencySchema>;
 
 export type Alert = typeof alerts.$inferSelect;
 export type InsertAlert = z.infer<typeof insertAlertSchema>;
+
+export type ChatMessage = typeof chatMessages.$inferSelect;
+export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;

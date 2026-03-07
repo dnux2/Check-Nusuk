@@ -2,6 +2,7 @@ import type { Express } from "express";
 import type { Server } from "http";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
+import { insertChatMessageSchema } from "@shared/schema";
 import { z } from "zod";
 import OpenAI from "openai";
 
@@ -134,6 +135,26 @@ export async function registerRoutes(
         });
       }
       res.status(500).json({ message: "Internal server error during translation" });
+    }
+  });
+
+  // Chat Messages
+  app.get("/api/chat/messages", async (req, res) => {
+    const pilgrimId = req.query.pilgrimId ? Number(req.query.pilgrimId) : undefined;
+    const messages = await storage.getChatMessages(pilgrimId);
+    res.json(messages);
+  });
+
+  app.post("/api/chat/messages", async (req, res) => {
+    try {
+      const input = insertChatMessageSchema.parse(req.body);
+      const msg = await storage.createChatMessage(input);
+      res.status(201).json(msg);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      throw err;
     }
   });
 
