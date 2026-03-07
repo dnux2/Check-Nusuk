@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { RealMap, type NavRoute, type FacilityType, type Facility, FACILITIES, TYPE_CFG, SUPERVISOR_POS, haversineM, getFacilityCrowdScore, fetchOSRM } from "@/components/real-map";
 import { AlertCircle, RefreshCw, Radio, Navigation, MapPin, Clock, ArrowLeft, ArrowRight, ArrowUp, CornerDownLeft, Footprints, X, ChevronDown, ChevronUp, Sparkles, Users, BrainCircuit, ChevronRight } from "lucide-react";
+import { PageHeader } from "@/components/page-header";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePilgrims } from "@/hooks/use-pilgrims";
 import { useLanguage } from "@/contexts/language-context";
@@ -291,39 +292,40 @@ export function CrowdManagementPage() {
     <div className="p-6 md:p-8 max-w-[1600px] mx-auto pb-16" dir={isRTL ? "rtl" : "ltr"}>
       {/* Header */}
       <div className="mb-6">
-        <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${isRTL ? "sm:flex-row-reverse" : ""}`}>
-          <div className={isRTL ? "text-right" : ""}>
-            <h1 className="text-3xl font-bold text-foreground">{t("crowdMonitoring")}</h1>
-            <p className="text-muted-foreground mt-1">{t("crowdManagementDesc")}</p>
-          </div>
-          <div className={`flex items-center gap-2 flex-shrink-0 flex-wrap ${isRTL ? "flex-row-reverse" : ""}`}>
-            {assessLoading ? (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary rounded-lg border border-primary/20 text-xs font-semibold">
-                <BrainCircuit className="w-3.5 h-3.5 animate-pulse" />
-                {ar ? "AI يُقيّم الآن…" : "AI assessing…"}
-              </div>
-            ) : assessment ? (
-              <div className={`flex items-center gap-1.5 px-3 py-1.5 bg-primary/5 text-primary rounded-lg border border-primary/20 text-xs font-semibold ${isRTL ? "flex-row-reverse" : ""}`}>
-                <BrainCircuit className="w-3.5 h-3.5" />
-                <span>{ar ? assessment.context?.hijriDate ?? "" : "AI Live"}</span>
-                <span className="text-muted-foreground">·</span>
-                <span dir="ltr">{lastUpdated ? lastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "--:--"}</span>
-                <button onClick={() => refetchAssessment()} title={ar ? "تحديث الآن" : "Refresh now"} className="ml-1 hover:text-primary/70 transition-colors">
+        <PageHeader
+          icon={<Users className="w-6 h-6 text-primary" />}
+          title={t("crowdMonitoring")}
+          subtitle={t("crowdManagementDesc")}
+          badge={
+            <div className={`flex items-center gap-2 flex-wrap ${isRTL ? "flex-row-reverse" : ""}`}>
+              {assessLoading ? (
+                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary rounded-lg border border-primary/20 text-xs font-semibold">
+                  <BrainCircuit className="w-3.5 h-3.5 animate-pulse" />
+                  {ar ? "AI يُقيّم الآن…" : "AI assessing…"}
+                </div>
+              ) : assessment ? (
+                <div className={`flex items-center gap-1.5 px-3 py-1.5 bg-primary/5 text-primary rounded-lg border border-primary/20 text-xs font-semibold ${isRTL ? "flex-row-reverse" : ""}`}>
+                  <BrainCircuit className="w-3.5 h-3.5" />
+                  <span>{ar ? assessment.context?.hijriDate ?? "" : "AI Live"}</span>
+                  <span className="text-muted-foreground">·</span>
+                  <span dir="ltr">{lastUpdated ? lastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "--:--"}</span>
+                  <button onClick={() => refetchAssessment()} title={ar ? "تحديث الآن" : "Refresh now"} className="ml-1 hover:text-primary/70 transition-colors">
+                    <RefreshCw className="w-3 h-3" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-secondary text-secondary-foreground rounded-lg border border-border text-xs font-semibold">
                   <RefreshCw className="w-3 h-3" />
-                </button>
-              </div>
-            ) : (
+                  {ar ? "جارٍ التحميل" : "Loading"}
+                </div>
+              )}
               <div className="flex items-center gap-1.5 px-3 py-1.5 bg-secondary text-secondary-foreground rounded-lg border border-border text-xs font-semibold">
-                <RefreshCw className="w-3 h-3" />
-                {ar ? "جارٍ التحميل" : "Loading"}
+                <Radio className="w-3.5 h-3.5" />
+                {ar ? "بث مباشر" : "Live"}
               </div>
-            )}
-            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-secondary text-secondary-foreground rounded-lg border border-border text-xs font-semibold">
-              <Radio className="w-3.5 h-3.5" />
-              {ar ? "بث مباشر" : "Live"}
             </div>
-          </div>
-        </div>
+          }
+        />
 
         {highlightedPilgrim && (
           <div className={`mt-3 flex items-center gap-3 p-3 bg-card border border-border rounded-xl text-sm font-semibold text-foreground ${isRTL ? "flex-row-reverse" : ""}`}>
