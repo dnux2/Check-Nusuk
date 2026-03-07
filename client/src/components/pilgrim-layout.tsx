@@ -186,13 +186,12 @@ export function PilgrimLayout({ children }: { children: React.ReactNode }) {
             </div>
           </div>
 
-          {/* Center: logo + name */}
-          <div className="flex items-center gap-2 absolute left-1/2 -translate-x-1/2">
-            <div className="w-7 h-7 rounded-xl overflow-hidden bg-secondary flex-shrink-0">
+          {/* Center: logo only */}
+          <Link href="/" className="absolute left-1/2 -translate-x-1/2" data-testid="link-logo-pilgrim">
+            <div className="w-9 h-9 rounded-xl overflow-hidden bg-[#f5e6c8] shadow-sm hover:opacity-80 transition-opacity">
               <img src={logoImg} alt="CheckNusuk" className="w-full h-full object-contain" />
             </div>
-            <span className="font-bold text-primary text-sm">CheckNusuk</span>
-          </div>
+          </Link>
 
           {/* End: SOS */}
           <Link href="/pilgrim" className="p-2 rounded-xl hover:bg-destructive/10 transition-colors" data-testid="btn-top-sos">

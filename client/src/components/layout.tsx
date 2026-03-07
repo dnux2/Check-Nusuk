@@ -6,6 +6,7 @@ import {
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage } from "@/contexts/language-context";
+import logoImg from "@assets/WhatsApp_Image_2026-03-07_at_12.53.20_AM_1772834050515.jpeg";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
@@ -139,7 +140,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         style={{ willChange: "margin" }}
       >
         {/* Header */}
-        <header className={`h-16 flex-shrink-0 border-b border-border bg-card/80 backdrop-blur-md flex items-center justify-between px-4 z-10 ${isRTL ? "flex-row-reverse" : ""}`}>
+        <header className={`relative h-16 flex-shrink-0 border-b border-border bg-card/80 backdrop-blur-md flex items-center justify-between px-4 z-10 ${isRTL ? "flex-row-reverse" : ""}`}>
           <div className={`flex items-center gap-2 ${isRTL ? "flex-row-reverse" : ""}`}>
             {/* Sidebar toggle */}
             <button
@@ -183,6 +184,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
               {currentPage}
             </h2>
           </div>
+
+          {/* Center: logo */}
+          <Link href="/" className="absolute left-1/2 -translate-x-1/2" data-testid="link-logo-admin">
+            <div className="w-9 h-9 rounded-xl overflow-hidden bg-[#f5e6c8] shadow-sm hover:opacity-80 transition-opacity">
+              <img src={logoImg} alt="CheckNusuk" className="w-full h-full object-contain" />
+            </div>
+          </Link>
 
           {/* Admin info — right side only */}
           <div className={`flex items-center gap-3 ${isRTL ? "flex-row-reverse" : ""}`}>
