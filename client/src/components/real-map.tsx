@@ -153,7 +153,7 @@ function makeSupervisorIcon() {
   });
 }
 
-// ── OSRM routing ──────────────────────────────────────────────────────────────
+// ── Pedestrian routing (Valhalla primary, OSRM fallback) ─────────────────────
 
 export interface NavStep { instruction: string; distanceM: number; type: string; modifier: string; }
 export interface NavRoute {
@@ -181,10 +181,87 @@ function formatManeuver(step: any, ar: boolean): string {
   return ar ? `استمر${on}` : `Continue${on}`;
 }
 
+// Decode Valhalla's polyline6 (precision 1e-6 vs standard 1e-5)
+function decodePolyline6(encoded: string): [number, number][] {
+  const coords: [number, number][] = [];
+  let index = 0, lat = 0, lng = 0;
+  while (index < encoded.length) {
+    let b, shift = 0, result = 0;
+    do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+    lat += (result & 1) ? ~(result >> 1) : (result >> 1);
+    shift = 0; result = 0;
+    do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+    lng += (result & 1) ? ~(result >> 1) : (result >> 1);
+    coords.push([lat / 1e6, lng / 1e6]);
+  }
+  return coords;
+}
+
+// Map Valhalla maneuver type numbers → NavStep type/modifier
+function valhallaAttrs(type: number): { stepType: string; modifier: string } {
+  if (type >= 1 && type <= 3) return { stepType: "depart",  modifier: "" };
+  if (type >= 4 && type <= 6) return { stepType: "arrive",  modifier: "" };
+  if (type === 8)              return { stepType: "turn",    modifier: "straight" };
+  if (type === 9)              return { stepType: "turn",    modifier: "slight right" };
+  if (type === 10)             return { stepType: "turn",    modifier: "right" };
+  if (type === 11)             return { stepType: "turn",    modifier: "sharp right" };
+  if (type === 12 || type === 13) return { stepType: "turn", modifier: "uturn" };
+  if (type === 14)             return { stepType: "turn",    modifier: "sharp left" };
+  if (type === 15)             return { stepType: "turn",    modifier: "left" };
+  if (type === 16)             return { stepType: "turn",    modifier: "slight left" };
+  return { stepType: "turn", modifier: "straight" };
+}
+
 export async function fetchOSRM(ar: boolean, fromLat: number, fromLng: number, toLat: number, toLng: number, targetName: string, targetColor: string): Promise<NavRoute | null> {
+  // Primary: Valhalla pedestrian — uses actual footpaths, plazas & walkways
+  try {
+    const body = {
+      locations: [{ lon: fromLng, lat: fromLat }, { lon: toLng, lat: toLat }],
+      costing: "pedestrian",
+      costing_options: {
+        pedestrian: {
+          walking_speed: 4.5,
+          use_ferry: 0.0,
+          walkway_factor: 0.8,
+          sidewalk_factor: 0.9,
+          alley_factor: 0.5,
+          driveway_factor: 0.4,
+        }
+      },
+      directions_options: { units: "kilometers", language: ar ? "ar" : "en-US" },
+    };
+    const res = await fetch("https://valhalla1.openstreetmap.de/route", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(8000),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const trip = data?.trip;
+      if (trip?.legs?.[0]) {
+        const leg = trip.legs[0];
+        const coords = decodePolyline6(leg.shape);
+        const distM = Math.round(trip.summary.length * 1000);
+        const durationS = Math.round(trip.summary.time);
+        const steps: NavStep[] = (leg.maneuvers as any[]).map((m) => {
+          const { stepType, modifier } = valhallaAttrs(m.type);
+          return {
+            instruction: m.instruction ?? formatManeuver({ maneuver: { type: stepType, modifier }, name: "" }, ar),
+            distanceM: Math.round((m.length ?? 0) * 1000),
+            type: stepType,
+            modifier,
+          };
+        });
+        return { coords, distanceM: distM, durationS, steps, targetName, targetColor };
+      }
+    }
+  } catch { /* fall through to OSRM */ }
+
+  // Fallback: OSRM foot profile
   try {
     const url = `https://router.project-osrm.org/route/v1/foot/${fromLng},${fromLat};${toLng},${toLat}?overview=full&geometries=geojson&steps=true`;
-    const res = await fetch(url);
+    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
     const data = await res.json();
     if (data.code !== "Ok" || !data.routes?.length) return null;
     const route = data.routes[0];
