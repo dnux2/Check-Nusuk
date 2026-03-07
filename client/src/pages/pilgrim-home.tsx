@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { AlertTriangle, Map, MessageSquare, Languages, BookOpen, Star, Droplets, Clock, CheckCircle2, ChevronRight, Stethoscope, UserSearch, Shield, X, MapPin, BatteryLow, Activity, Zap } from "lucide-react";
+import { AlertTriangle, Map, MessageSquare, Languages, BookOpen, Star, Droplets, Clock, CheckCircle2, ChevronRight, Stethoscope, UserSearch, Shield, X, MapPin, BatteryLow, Activity, Zap, LocateFixed, Loader2, CloudSun } from "lucide-react";
 import { useLanguage } from "@/contexts/language-context";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -58,6 +58,48 @@ const QUICK_ACTIONS = [
   { href: "/pilgrim/translator", iconEl: <Languages className="w-6 h-6" />,     titleAr: "المترجم", titleEn: "Translator", descAr: "ترجمة فورية بالذكاء الاصطناعي", descEn: "AI instant translation",         color: "text-accent"  },
 ];
 
+// ── Weather helpers ───────────────────────────────────────────────────────────
+function wmoEmoji(code: number): string {
+  if (code === 0) return "☀️";
+  if (code <= 2) return "⛅";
+  if (code <= 3) return "☁️";
+  if (code <= 49) return "🌫️";
+  if (code <= 59) return "🌦️";
+  if (code <= 69) return "🌧️";
+  if (code <= 79) return "❄️";
+  if (code <= 84) return "🌧️";
+  if (code <= 99) return "⛈️";
+  return "🌡️";
+}
+
+type GeoStatus = "idle" | "requesting" | "granted" | "denied";
+
+interface PrayerEntry { nameAr: string; nameEn: string; time: string; isNext: boolean; }
+
+function calcNextPrayer(timings: Record<string, string>): PrayerEntry[] {
+  const keys = [
+    { key: "Fajr",    nameAr: "الفجر",  nameEn: "Fajr"    },
+    { key: "Dhuhr",   nameAr: "الظهر",  nameEn: "Dhuhr"   },
+    { key: "Asr",     nameAr: "العصر",  nameEn: "Asr"     },
+    { key: "Maghrib", nameAr: "المغرب", nameEn: "Maghrib" },
+    { key: "Isha",    nameAr: "العشاء", nameEn: "Isha"    },
+  ];
+  const now = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const mins = keys.map(k => {
+    const [h, m] = (timings[k.key] ?? "00:00").split(":").map(Number);
+    return h * 60 + m;
+  });
+  let nextIdx = mins.findIndex(m => m > nowMin);
+  if (nextIdx === -1) nextIdx = 0;
+  return keys.map((k, i) => ({
+    nameAr: k.nameAr,
+    nameEn: k.nameEn,
+    time: timings[k.key]?.slice(0, 5) ?? "--:--",
+    isNext: i === nextIdx,
+  }));
+}
+
 type EmergencyType = "Medical" | "Lost" | "Security";
 
 const EMERGENCY_TYPES: { type: EmergencyType; ar: string; en: string; icon: React.ReactNode; color: string }[] = [
@@ -74,6 +116,87 @@ export function PilgrimHomePage() {
   const [sosSent, setSosSent] = useState(false);
   const [showTypeModal, setShowTypeModal] = useState(false);
   const [selectedType, setSelectedType] = useState<EmergencyType | null>(null);
+
+  // ── Location / Weather / Prayer states ─────────────────────────────────────
+  const [geoStatus, setGeoStatus] = useState<GeoStatus>("idle");
+  const [weather, setWeather] = useState<{ temp: number; code: number } | null>(null);
+  const [prayers, setPrayers] = useState<PrayerEntry[] | null>(null);
+  const [hijriDate, setHijriDate] = useState<string>("");
+  const [cityName, setCityName] = useState<string>("");
+
+  const fetchLiveData = useCallback(async (lat: number, lng: number) => {
+    // Weather — Open-Meteo (free, no key)
+    try {
+      const wRes = await fetch(
+        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,weathercode&timezone=auto`
+      );
+      const wJson = await wRes.json();
+      setWeather({
+        temp: Math.round(wJson.current.temperature_2m),
+        code: wJson.current.weathercode,
+      });
+    } catch { /* keep null */ }
+
+    // Prayer times + Hijri date — Al-Aladhan
+    try {
+      const ts = Math.floor(Date.now() / 1000);
+      const pRes = await fetch(
+        `https://api.aladhan.com/v1/timings/${ts}?latitude=${lat}&longitude=${lng}&method=4`
+      );
+      const pJson = await pRes.json();
+      const timings: Record<string, string> = pJson.data?.timings ?? {};
+      setPrayers(calcNextPrayer(timings));
+      const hijri = pJson.data?.date?.hijri;
+      if (hijri) {
+        setHijriDate(ar
+          ? `${hijri.day} ${hijri.month.ar} ${hijri.year} هـ`
+          : `${hijri.day} ${hijri.month.en} ${hijri.year} AH`);
+      }
+    } catch { /* keep null */ }
+
+    // Reverse geocode city name — Nominatim (free)
+    try {
+      const gRes = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=${lang}`
+      );
+      const gJson = await gRes.json();
+      const city =
+        gJson.address?.city || gJson.address?.town || gJson.address?.village || gJson.address?.county || "";
+      setCityName(city);
+    } catch { /* keep null */ }
+  }, [ar, lang]);
+
+  const requestLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      setGeoStatus("denied");
+      return;
+    }
+    setGeoStatus("requesting");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setGeoStatus("granted");
+        fetchLiveData(pos.coords.latitude, pos.coords.longitude);
+      },
+      () => {
+        setGeoStatus("denied");
+        // fallback: Mecca
+        fetchLiveData(21.4225, 39.8262);
+      },
+      { timeout: 12000, maximumAge: 120000 }
+    );
+  }, [fetchLiveData]);
+
+  // Auto-request on mount using cached permission
+  useEffect(() => {
+    if (navigator.permissions) {
+      navigator.permissions.query({ name: "geolocation" }).then((result) => {
+        if (result.state === "granted") {
+          requestLocation();
+        }
+        // else show the permission card
+      }).catch(() => { /* ignore */ });
+    }
+  }, [requestLocation]);
 
   const pilgrimId = 1;
   const LOC_QUEUE_KEY = "loc_queue_pilgrim_1";
@@ -246,7 +369,7 @@ export function PilgrimHomePage() {
         >
           <div className="px-6 pt-5 pb-4">
             <div className="text-xs font-semibold text-[#2d7a5f]/70 mb-1">
-              ٢٩ ذو الحجة ١٤٤٦
+              {hijriDate || "٢٩ ذو الحجة ١٤٤٦"}
             </div>
             <h1 className="text-xl font-bold text-[#0E4D41] mb-0.5">
               {ar ? `مرحباً، ${pilgrim?.name?.split(" ")[0] || "أحمد"} 👋` : `Welcome, ${pilgrim?.name?.split(" ")[0] || "Ahmed"} 👋`}
@@ -270,7 +393,13 @@ export function PilgrimHomePage() {
             </div>
             <div className="flex-1 px-4 py-3 text-center">
               <div className="text-[10px] text-[#2d7a5f]/60 mb-1">{ar ? "الطقس" : "Weather"}</div>
-              <div className="text-xs font-bold text-[#0E4D41]">42°C ☀️</div>
+              {geoStatus === "requesting" && !weather ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-[#0E4D41] mx-auto" />
+              ) : weather ? (
+                <div className="text-xs font-bold text-[#0E4D41]">{weather.temp}°C {wmoEmoji(weather.code)}</div>
+              ) : (
+                <div className="text-xs font-bold text-[#0E4D41]">42°C ☀️</div>
+              )}
             </div>
           </div>
         </motion.div>
