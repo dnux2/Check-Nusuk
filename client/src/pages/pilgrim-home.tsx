@@ -48,7 +48,7 @@ export function PilgrimHomePage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/emergencies"] });
       setSosSent(true);
-      toast({ title: ar ? "🆘 تم إرسال نداء الطوارئ" : "🆘 SOS Sent", description: ar ? "سيصلك المشرف قريباً" : "A supervisor will reach you soon" });
+      toast({ title: ar ? "تم إرسال نداء الطوارئ" : "SOS Sent", description: ar ? "سيصلك المشرف قريباً" : "A supervisor will reach you soon" });
     },
   });
 
@@ -110,12 +110,12 @@ export function PilgrimHomePage() {
           <button
             onClick={() => !sosSent && createEmergency.mutate()}
             disabled={sosSent}
-            className={`w-full py-4 rounded-3xl font-bold text-base flex items-center justify-center gap-3 transition-all shadow-md active:scale-[0.98]
+            className={`w-full py-4 rounded-3xl font-bold text-base flex flex-row items-center justify-center gap-3 transition-all shadow-md active:scale-[0.98]
               ${sosSent ? "bg-muted text-muted-foreground" : "bg-destructive hover:bg-destructive/90 text-destructive-foreground"}`}
             data-testid="btn-sos-home"
           >
-            <AlertTriangle className="w-5 h-5" />
-            {sosSent ? (ar ? "✓ تم إرسال نداء الطوارئ" : "✓ SOS Sent — Help is on the way") : (ar ? "🆘 زر الطوارئ SOS" : "🆘 SOS Emergency")}
+            <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+            {sosSent ? (ar ? "✓ تم إرسال نداء الطوارئ" : "✓ SOS Sent — Help is on the way") : (ar ? "زر الطوارئ SOS" : "SOS Emergency")}
           </button>
         </motion.div>
 
