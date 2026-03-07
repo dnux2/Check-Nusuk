@@ -1094,7 +1094,7 @@ export function PilgrimGuideMap() {
             </div>
           </div>
         )}
-        <MapContainer center={[fallbackLat, fallbackLng]} zoom={14} style={{ width: "100%", height: "100%", cursor: pickingOrigin ? "crosshair" : undefined }} zoomControl={false}>
+        <MapContainer center={[fallbackLat, fallbackLng]} zoom={14} dragging={true} scrollWheelZoom={true} doubleClickZoom={true} touchZoom={true} style={{ width: "100%", height: "100%", cursor: pickingOrigin ? "crosshair" : undefined }} zoomControl={false}>
           <TileLayer attribution='© <a href="https://carto.com">CARTO</a>' url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png" />
 
           <MapClickHandler picking={pickingOrigin} onPick={(lat, lng) => {

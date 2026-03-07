@@ -123,6 +123,19 @@
   animation: scanline 3s linear infinite;
 }
 
+/* Leaflet map — enable mouse drag on desktop */
+.leaflet-container {
+  touch-action: none;
+  cursor: grab;
+}
+.leaflet-grab {
+  cursor: grab;
+}
+.leaflet-dragging .leaflet-grab,
+.leaflet-dragging .leaflet-container {
+  cursor: grabbing !important;
+}
+
 /* Pilgrim location pulsing dot */
 @keyframes pilgrim-pulse {
   0%   { transform: scale(1);   opacity: 1; }
