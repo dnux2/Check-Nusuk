@@ -6,7 +6,7 @@ import { useLanguage } from "@/contexts/language-context";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { type Pilgrim } from "@shared/schema";
-import { Navigation, X, ChevronDown, ChevronUp, Clock, MapPin, RefreshCw, LocateFixed, MousePointer2 } from "lucide-react";
+import { Navigation, X, ChevronDown, ChevronUp, Clock, MapPin, RefreshCw, LocateFixed, MousePointer2, Users, AlertTriangle, ArrowRight, CheckCircle2 } from "lucide-react";
 
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -64,11 +64,50 @@ const TYPE_CONFIG: Record<FacilityType, { colorHex: string; lightHex: string; em
   transport: { colorHex: "#C49A3C", lightHex: "#f5ecd6", emoji: "🚌", labelAr: "النقل",        labelEn: "Transport" },
 };
 
-function makeFacilityIcon(type: FacilityType, highlighted = false) {
+function getCrowdScore(id: string, type: FacilityType, hour: number): number {
+  const seed = id.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % 20;
+  const isPrayer   = [4,5,12,13,15,16,18,19,20,21].includes(hour);
+  const isPostPray = [6,13,14,16,17,19,21,22].includes(hour);
+  const isNight    = hour >= 23 || hour < 4;
+  const isMidday   = hour >= 11 && hour <= 15;
+  let base = 30;
+  if (type === "mosque") {
+    if (isPrayer) base = id === "m1" ? 98 : 78;
+    else if (isPostPray) base = id === "m1" ? 75 : 42;
+    else if (isNight) base = id === "m1" ? 55 : 15;
+    else base = id === "m1" ? 70 : 35;
+  } else if (type === "hospital") {
+    base = isMidday ? 68 : isPrayer ? 45 : isNight ? 22 : 48;
+  } else if (type === "water") {
+    base = isPostPray || isMidday ? 74 : isPrayer ? 58 : isNight ? 18 : 38;
+  } else if (type === "bathroom") {
+    base = isPrayer ? 88 : isPostPray ? 52 : isNight ? 14 : 36;
+  } else if (type === "transport") {
+    base = [5,6,12,13,21,22].includes(hour) ? 82 : isNight ? 22 : 44;
+  }
+  return Math.min(100, Math.max(0, base + seed - 10));
+}
+
+function crowdColor(score: number) {
+  if (score >= 75) return "#e74c3c";
+  if (score >= 50) return "#e67e22";
+  return "#27ae60";
+}
+
+function crowdBadgeHtml(score: number) {
+  const color = crowdColor(score);
+  return `<div style="position:absolute;top:-2px;right:-2px;width:13px;height:13px;background:${color};border:2px solid white;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,0.3)"></div>`;
+}
+
+function makeFacilityIcon(type: FacilityType, highlighted = false, crowdScore?: number) {
   const cfg = TYPE_CONFIG[type];
   const size = highlighted ? 40 : 34;
+  const badge = crowdScore !== undefined ? crowdBadgeHtml(crowdScore) : "";
   return L.divIcon({
-    html: `<div style="width:${size}px;height:${size}px;background:${highlighted ? cfg.colorHex : cfg.lightHex};border-radius:50%;border:${highlighted ? "3px" : "2.5px"} solid ${cfg.colorHex};display:flex;align-items:center;justify-content:center;font-size:${highlighted ? 17 : 15}px;box-shadow:0 2px 8px ${cfg.colorHex}${highlighted ? "88" : "44"}">${cfg.emoji}</div>`,
+    html: `<div style="position:relative;width:${size}px;height:${size}px">
+      <div style="width:${size}px;height:${size}px;background:${highlighted ? cfg.colorHex : cfg.lightHex};border-radius:50%;border:${highlighted ? "3px" : "2.5px"} solid ${cfg.colorHex};display:flex;align-items:center;justify-content:center;font-size:${highlighted ? 17 : 15}px;box-shadow:0 2px 8px ${cfg.colorHex}${highlighted ? "88" : "44"}">${cfg.emoji}</div>
+      ${badge}
+    </div>`,
     className: "",
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
@@ -177,6 +216,124 @@ function maneuverToStep(type: string, modifier: string | undefined, name: string
 
 type GpsStatus = "idle" | "requesting" | "granted" | "denied";
 
+type CrowdAlt = { facility: Facility; crowdScore: number; distM: number };
+
+function CrowdWarningModal({
+  ar, facility, crowdScore, alternatives, analysis, loading, onNavigate, onPickAlt, onClose,
+}: {
+  ar: boolean;
+  facility: Facility;
+  crowdScore: number;
+  alternatives: CrowdAlt[];
+  analysis: string;
+  loading: boolean;
+  onNavigate: () => void;
+  onPickAlt: (f: Facility) => void;
+  onClose: () => void;
+}) {
+  const cfg = TYPE_CONFIG[facility.type];
+  const color = crowdColor(crowdScore);
+  const crowdLabelAr = crowdScore >= 75 ? "زحام شديد 🔴" : crowdScore >= 50 ? "زحام متوسط 🟡" : "هادئ نسبياً 🟢";
+  const crowdLabelEn = crowdScore >= 75 ? "Heavy Crowd 🔴" : crowdScore >= 50 ? "Moderate Crowd 🟡" : "Relatively Calm 🟢";
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-4" style={{ direction: ar ? "rtl" : "ltr" }}>
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl overflow-hidden">
+        {/* Header */}
+        <div className="px-5 pt-5 pb-4" style={{ background: `linear-gradient(135deg, ${color}22 0%, white 100%)` }}>
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-xl flex-shrink-0" style={{ background: cfg.lightHex, border: `2px solid ${cfg.colorHex}` }}>
+                {cfg.emoji}
+              </div>
+              <div>
+                <div className="font-bold text-gray-900 text-[15px] leading-tight">{ar ? facility.nameAr : facility.nameEn}</div>
+                <div className="text-xs font-semibold mt-0.5" style={{ color }}>{ar ? crowdLabelAr : crowdLabelEn}</div>
+              </div>
+            </div>
+            <button onClick={onClose} className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0 hover:bg-gray-200">
+              <X className="w-3.5 h-3.5 text-gray-500" />
+            </button>
+          </div>
+          {/* Crowd gauge */}
+          <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
+            <div className="h-full rounded-full transition-all duration-700" style={{ width: `${crowdScore}%`, background: color }} />
+          </div>
+          <div className="flex justify-between text-[10px] text-gray-400 mt-1">
+            <span>{ar ? "هادئ" : "Calm"}</span>
+            <span className="font-bold" style={{ color }}>{crowdScore}%</span>
+            <span>{ar ? "ممتلئ" : "Full"}</span>
+          </div>
+        </div>
+
+        {/* AI Analysis */}
+        <div className="px-5 pb-4">
+          <div className="flex items-center gap-1.5 mb-2">
+            <div className="w-5 h-5 rounded-full bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center">
+              <span className="text-white text-[9px] font-bold">AI</span>
+            </div>
+            <span className="text-xs font-bold text-gray-700">{ar ? "تحليل الذكاء الاصطناعي" : "AI Analysis"}</span>
+          </div>
+          {loading ? (
+            <div className="flex items-center gap-2 py-3">
+              <div className="w-4 h-4 border-2 border-teal-600 border-t-transparent rounded-full animate-spin flex-shrink-0" />
+              <span className="text-xs text-gray-500">{ar ? "يتم التحليل…" : "Analyzing…"}</span>
+            </div>
+          ) : (
+            <p className="text-[12px] text-gray-600 leading-relaxed">{analysis}</p>
+          )}
+        </div>
+
+        {/* Alternatives */}
+        {alternatives.length > 0 && (
+          <div className="px-5 pb-4">
+            <div className="text-xs font-bold text-gray-700 mb-2 flex items-center gap-1.5">
+              <ArrowRight className="w-3.5 h-3.5" />{ar ? "بدائل مقترحة (مرتبة حسب الأقل زحاماً)" : "Suggested alternatives (least crowded first)"}
+            </div>
+            <div className="flex flex-col gap-2">
+              {alternatives.map((alt) => (
+                <button key={alt.facility.id} onClick={() => onPickAlt(alt.facility)}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-2xl border-2 text-start hover:border-teal-400 hover:bg-teal-50 transition-all"
+                  style={{ borderColor: crowdColor(alt.crowdScore) + "55", background: crowdColor(alt.crowdScore) + "08" }}
+                  data-testid={`alt-${alt.facility.id}`}>
+                  <div className="w-8 h-8 rounded-xl flex items-center justify-center text-sm flex-shrink-0"
+                    style={{ background: TYPE_CONFIG[alt.facility.type].lightHex }}>
+                    {TYPE_CONFIG[alt.facility.type].emoji}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-[12px] text-gray-800 truncate">{ar ? alt.facility.nameAr : alt.facility.nameEn}</div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-[10px] font-bold" style={{ color: crowdColor(alt.crowdScore) }}>
+                        {alt.crowdScore < 50 ? (ar ? "هادئ" : "Calm") : alt.crowdScore < 75 ? (ar ? "متوسط" : "Moderate") : (ar ? "مزدحم" : "Crowded")} {alt.crowdScore}%
+                      </span>
+                      <span className="text-[10px] text-gray-400">· {fmtDist(alt.distM, ar)}</span>
+                    </div>
+                  </div>
+                  <ArrowRight className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" style={{ transform: ar ? "scaleX(-1)" : undefined }} />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Action buttons */}
+        <div className="px-5 pb-5 flex gap-2">
+          <button onClick={onNavigate} data-testid="btn-navigate-anyway"
+            className="flex-1 py-3 rounded-2xl border-2 border-gray-200 text-gray-600 text-sm font-semibold hover:bg-gray-50 transition-colors">
+            {ar ? "توجيه رغم الزحام" : "Navigate Anyway"}
+          </button>
+          <button onClick={onClose} data-testid="btn-crowd-cancel"
+            className="py-3 px-4 rounded-2xl text-sm font-semibold text-white transition-colors"
+            style={{ background: "#0E4D41" }}>
+            {ar ? "إلغاء" : "Cancel"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function makeCustomOriginIcon() {
   return L.divIcon({
     html: `<div style="display:flex;flex-direction:column;align-items:center">
@@ -268,6 +425,14 @@ export function PilgrimGuideMap() {
   const [remainingS, setRemainingS] = useState(0);
   const [stepsOpen, setStepsOpen] = useState(false);
 
+  const [crowdModal, setCrowdModal] = useState<{
+    facility: Facility; crowdScore: number; alternatives: CrowdAlt[];
+  } | null>(null);
+  const [crowdAnalysis, setCrowdAnalysis] = useState("");
+  const [crowdAnalysisLoading, setCrowdAnalysisLoading] = useState(false);
+
+  const currentHour = new Date().getHours();
+
   const stopNav = () => {
     setNavRoute(null);
     setCurrentStep(0);
@@ -306,7 +471,8 @@ export function PilgrimGuideMap() {
     );
   };
 
-  const handleNavigate = async (facility: Facility) => {
+  const executeNavigation = async (facility: Facility) => {
+    setCrowdModal(null);
     setNavLoading(true);
     try {
       const url = `https://router.project-osrm.org/route/v1/foot/${myLng},${myLat};${facility.lng},${facility.lat}?overview=full&geometries=geojson&steps=true`;
@@ -364,6 +530,41 @@ export function PilgrimGuideMap() {
       toast({ title: ar ? "⚠️ خريطة مباشرة — تحقق من الإنترنت" : "⚠️ Direct route — check internet", variant: "destructive" });
     } finally {
       setNavLoading(false);
+    }
+  };
+
+  const handleNavigate = async (facility: Facility) => {
+    const score = getCrowdScore(facility.id, facility.type, currentHour);
+    if (score < 50) {
+      executeNavigation(facility);
+      return;
+    }
+    const alts: CrowdAlt[] = FACILITIES
+      .filter(f => f.type === facility.type && f.id !== facility.id)
+      .map(f => ({ facility: f, crowdScore: getCrowdScore(f.id, f.type, currentHour), distM: haversineM(myLat, myLng, f.lat, f.lng) }))
+      .sort((a, b) => a.crowdScore - b.crowdScore)
+      .slice(0, 3);
+    setCrowdModal({ facility, crowdScore: score, alternatives: alts });
+    setCrowdAnalysis("");
+    setCrowdAnalysisLoading(true);
+    try {
+      const res = await fetch("/api/crowd-analysis", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          facility: { nameAr: facility.nameAr, nameEn: facility.nameEn, type: facility.type },
+          alternatives: alts.map(a => ({ nameAr: a.facility.nameAr, nameEn: a.facility.nameEn, crowdScore: a.crowdScore, distM: a.distM })),
+          crowdScore: score,
+          lang,
+          hour: currentHour,
+        }),
+      });
+      const data = await res.json();
+      setCrowdAnalysis(data.analysis ?? "");
+    } catch {
+      setCrowdAnalysis(ar ? "تعذّر تحميل التحليل. تحقق من الاتصال." : "Failed to load analysis. Check your connection.");
+    } finally {
+      setCrowdAnalysisLoading(false);
     }
   };
 
@@ -567,19 +768,32 @@ export function PilgrimGuideMap() {
           {!navRoute && visibleFacilities.map(facility => {
             const distM = haversineM(myLat, myLng, facility.lat, facility.lng);
             const distLabel = fmtDist(distM, ar);
+            const cs = getCrowdScore(facility.id, facility.type, currentHour);
+            const cColor = crowdColor(cs);
+            const cLabelAr = cs >= 75 ? "زحام شديد" : cs >= 50 ? "زحام متوسط" : "هادئ";
+            const cLabelEn = cs >= 75 ? "Heavy" : cs >= 50 ? "Moderate" : "Calm";
             return (
-              <Marker key={facility.id} position={[facility.lat, facility.lng]} icon={makeFacilityIcon(facility.type)}>
-                <Popup maxWidth={210}>
-                  <div style={{ direction: isRTL ? "rtl" : "ltr", fontFamily: "inherit", minWidth: 170 }}>
+              <Marker key={facility.id} position={[facility.lat, facility.lng]} icon={makeFacilityIcon(facility.type, false, cs)}>
+                <Popup maxWidth={220}>
+                  <div style={{ direction: isRTL ? "rtl" : "ltr", fontFamily: "inherit", minWidth: 180 }}>
                     <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4, color: TYPE_CONFIG[facility.type].colorHex }}>
                       {TYPE_CONFIG[facility.type].emoji} {ar ? facility.nameAr : facility.nameEn}
                     </div>
                     {(ar ? facility.detailAr : facility.detailEn) && (
-                      <div style={{ fontSize: 11, color: "#6B4F35", marginBottom: 4 }}>{ar ? facility.detailAr : facility.detailEn}</div>
+                      <div style={{ fontSize: 11, color: "#6B4F35", marginBottom: 6 }}>{ar ? facility.detailAr : facility.detailEn}</div>
                     )}
-                    <div style={{ fontSize: 11, color: "#8B6E4E", marginBottom: 10, display: "flex", gap: 10 }}>
+                    <div style={{ fontSize: 11, color: "#8B6E4E", marginBottom: 6, display: "flex", gap: 10 }}>
                       <span>📍 {distLabel}</span>
                       <span>🕐 {fmtTime(distM / 1.2, ar)}</span>
+                    </div>
+                    <div style={{ marginBottom: 10 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3, fontSize: 10 }}>
+                        <span style={{ fontWeight: 700, color: cColor }}>👥 {ar ? cLabelAr : cLabelEn}</span>
+                        <span style={{ color: cColor, fontWeight: 700 }}>{cs}%</span>
+                      </div>
+                      <div style={{ height: 5, borderRadius: 4, background: "#f0f0f0", overflow: "hidden" }}>
+                        <div style={{ height: "100%", width: `${cs}%`, background: cColor, borderRadius: 4 }} />
+                      </div>
                     </div>
                     <button
                       onClick={() => handleNavigate(facility)}
@@ -595,6 +809,20 @@ export function PilgrimGuideMap() {
 
         </MapContainer>
       </div>
+
+      {crowdModal && (
+        <CrowdWarningModal
+          ar={ar}
+          facility={crowdModal.facility}
+          crowdScore={crowdModal.crowdScore}
+          alternatives={crowdModal.alternatives}
+          analysis={crowdAnalysis}
+          loading={crowdAnalysisLoading}
+          onNavigate={() => executeNavigation(crowdModal.facility)}
+          onPickAlt={(f) => { setCrowdModal(null); executeNavigation(f); }}
+          onClose={() => setCrowdModal(null)}
+        />
+      )}
     </div>
   );
 }

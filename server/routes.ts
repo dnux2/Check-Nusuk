@@ -237,6 +237,42 @@ export async function registerRoutes(
   // Seed data function
   await seedDatabase();
 
+  // Crowd analysis endpoint — uses OpenAI to analyze crowd & suggest alternatives
+  app.post("/api/crowd-analysis", async (req, res) => {
+    try {
+      const { facility, alternatives, crowdScore, lang, hour } = req.body as {
+        facility: { nameAr: string; nameEn: string; type: string };
+        alternatives: Array<{ nameAr: string; nameEn: string; crowdScore: number; distM: number }>;
+        crowdScore: number;
+        lang: "ar" | "en";
+        hour: number;
+      };
+
+      const crowdLabel = crowdScore >= 80 ? (lang === "ar" ? "شديدة جداً" : "very heavy") :
+                         crowdScore >= 60 ? (lang === "ar" ? "مرتفعة" : "heavy") :
+                         (lang === "ar" ? "معتدلة" : "moderate");
+
+      const prompt = lang === "ar"
+        ? `أنت مساعد ذكي لإدارة الحج في مكة المكرمة. الحاج يريد التوجه إلى "${facility.nameAr}" (نوع: ${facility.type}). مستوى الزحام الآن ${crowdLabel} (نسبة ${crowdScore}%). الساعة الحالية: ${hour}:00.
+البدائل المتاحة: ${alternatives.map((a, i) => `${i + 1}. ${a.nameAr} (زحام: ${a.crowdScore}%، مسافة: ${Math.round(a.distM)}م)`).join(" / ")}.
+اكتب تحليلاً موجزاً (3-4 جمل) يشرح سبب الزحام الآن، ثم اقترح أفضل بديل واحد بالاسم مع سبب التوصية. الأسلوب: ودي، واضح، إسلامي مناسب للحاج. لا تستخدم نقاطاً أو قوائم.`
+        : `You are a smart Hajj management assistant in Makkah. A pilgrim wants to go to "${facility.nameEn}" (type: ${facility.type}). Current crowd level is ${crowdLabel} (${crowdScore}%). Current time: ${hour}:00.
+Available alternatives: ${alternatives.map((a, i) => `${i + 1}. ${a.nameEn} (crowd: ${a.crowdScore}%, distance: ${Math.round(a.distM)}m)`).join(" / ")}.
+Write a brief analysis (3-4 sentences) explaining why it's crowded now, then recommend the best one alternative by name with reason. Tone: friendly, clear, suitable for a pilgrim. No bullet points or lists.`;
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4.1-mini",
+        messages: [{ role: "user", content: prompt }],
+        max_completion_tokens: 300,
+      });
+
+      res.json({ analysis: completion.choices[0]?.message?.content ?? "" });
+    } catch (err) {
+      console.error("Crowd analysis error:", err);
+      res.status(500).json({ error: "Analysis failed" });
+    }
+  });
+
   return httpServer;
 }
 
