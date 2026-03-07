@@ -13,18 +13,18 @@ export function LandingPage() {
       {/* Navbar */}
       <nav className="fixed w-full z-50 bg-background/80 backdrop-blur-xl border-b border-border/50 transition-all">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <div className={`flex items-center gap-3 ${isRTL ? "flex-row-reverse" : ""}`}>
-            <div className="w-11 h-11 rounded-xl overflow-hidden shadow-lg bg-[#f5e6c8] flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl overflow-hidden shadow-lg bg-[#f5e6c8] flex-shrink-0">
               <img src={logoImg} alt="CheckNusuk Logo" className="w-full h-full object-contain" />
             </div>
             <span className="font-display font-bold text-xl tracking-tight text-foreground">CheckNusuk</span>
           </div>
 
-          <div className={`flex items-center gap-4 ${isRTL ? "flex-row-reverse" : ""}`}>
+          <div className="flex items-center gap-4">
             {/* Language toggle */}
-            <div className="flex items-center bg-secondary rounded-xl overflow-hidden border border-border">
-              <button onClick={() => setLang("en")} className={`px-3 py-1.5 text-sm font-bold transition-all ${lang === "en" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>EN</button>
-              <button onClick={() => setLang("ar")} className={`px-3 py-1.5 text-sm font-bold transition-all ${lang === "ar" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>العربية</button>
+            <div className="flex items-center bg-secondary rounded-lg overflow-hidden border border-border">
+              <button onClick={() => setLang("en")} className={`px-2 py-1 text-xs font-bold transition-all ${lang === "en" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>EN</button>
+              <button onClick={() => setLang("ar")} className={`px-2 py-1 text-xs font-bold transition-all ${lang === "ar" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>ع</button>
             </div>
           </div>
         </div>
@@ -46,14 +46,6 @@ export function LandingPage() {
               <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
             </span>
             {ar ? "نظام الحج الذكي 1446 — متاح الآن" : "Hajj 1446 Smart System — Online"}
-          </motion.div>
-
-          {/* Logo */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5, delay: 0.05 }}
-            className="w-24 h-24 rounded-3xl overflow-hidden shadow-2xl bg-[#f5e6c8] mb-8"
-          >
-            <img src={logoImg} alt="CheckNusuk" className="w-full h-full object-contain" />
           </motion.div>
 
           <motion.h1
