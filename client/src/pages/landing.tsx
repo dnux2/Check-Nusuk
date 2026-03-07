@@ -188,13 +188,13 @@ export function LandingPage() {
                   transition={{ duration: 0.4, delay: i * 0.08 }}
                   className="bg-background rounded-3xl p-7 border border-border/50 hover:border-primary/30 hover:shadow-xl transition-all duration-300 group"
                 >
-                  <div className="w-12 h-12 rounded-2xl bg-secondary flex items-center justify-center text-primary mb-5 group-hover:scale-110 group-hover:bg-primary group-hover:text-white transition-all duration-300">
+                  <div className="w-12 h-12 rounded-2xl bg-secondary flex items-center justify-center text-primary mb-5 mx-auto group-hover:scale-110 group-hover:bg-primary group-hover:text-white transition-all duration-300">
                     <feature.icon className="w-6 h-6" />
                   </div>
-                  <h3 className="text-lg font-bold font-display mb-2">
+                  <h3 className="text-lg font-bold font-display mb-2 text-center">
                     {ar ? feature.titleAr : feature.titleEn}
                   </h3>
-                  <p className="text-muted-foreground text-sm leading-relaxed">
+                  <p className="text-muted-foreground text-sm leading-relaxed text-center">
                     {ar ? feature.descAr : feature.descEn}
                   </p>
                 </motion.div>
