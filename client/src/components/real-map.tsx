@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { MapContainer, TileLayer, Circle, Marker, Popup, Tooltip, useMap, Polyline } from "react-leaflet";
 import L from "leaflet";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, AlertTriangle, MapPin, Activity, Navigation, Clock, ChevronRight, Footprints, ArrowLeft, ArrowRight, ArrowUp, CornerDownLeft, CornerUpLeft, CornerUpRight } from "lucide-react";
+import { X, AlertTriangle, MapPin, Activity, Navigation, Clock, ArrowLeft, ArrowRight, ArrowUp, CornerDownLeft, Footprints, Layers } from "lucide-react";
 import { type Pilgrim } from "@shared/schema";
 import { useLanguage } from "@/contexts/language-context";
 import { useToast } from "@/hooks/use-toast";
@@ -14,6 +14,74 @@ L.Icon.Default.mergeOptions({
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
+
+// ── Facility data (real, verified coordinates — Mecca) ──────────────────────
+
+type FacilityType = "hospital" | "water" | "mosque" | "bathroom" | "transport";
+
+interface Facility {
+  id: string; type: FacilityType;
+  nameAr: string; nameEn: string;
+  lat: number; lng: number;
+  detailAr?: string; detailEn?: string;
+}
+
+const FACILITIES: Facility[] = [
+  { id: "h1", type: "hospital", nameAr: "مدينة الملك عبدالله الطبية",  nameEn: "King Abdullah Medical City",   lat: 21.38135, lng: 39.88109, detailAr: "١٥٥٠ سرير · تخصصات متعددة",    detailEn: "1550 beds · Multi-specialty" },
+  { id: "h2", type: "hospital", nameAr: "مستشفى أجياد الطوارئ",       nameEn: "Ajyad Emergency Hospital",     lat: 21.41940, lng: 39.82726, detailAr: "طوارئ ٢٤ ساعة · قرب الحرم",    detailEn: "24h Emergency · Near Haram" },
+  { id: "h3", type: "hospital", nameAr: "مستشفى النور التخصصي",       nameEn: "Al-Nour Specialist Hospital",  lat: 21.38487, lng: 39.86052, detailAr: "٥٠٠ سرير · أمراض الحج",         detailEn: "500 beds · Hajj diseases" },
+  { id: "h4", type: "hospital", nameAr: "مستشفى منى للطوارئ",         nameEn: "Mina Emergency Hospital",      lat: 21.41950, lng: 39.87200, detailAr: "قرب جسر الجمرات · ٢٠٠ سرير",  detailEn: "Near Jamarat · 200 beds" },
+  { id: "h5", type: "hospital", nameAr: "مستشفى مزدلفة الميداني",     nameEn: "Muzdalifah Field Hospital",    lat: 21.38880, lng: 39.93600, detailAr: "خدمات إسعاف ليلية",            detailEn: "Night emergency services" },
+  { id: "w1", type: "water",    nameAr: "زمزم — المسجد الحرام",       nameEn: "Zamzam — Grand Mosque",        lat: 21.42250, lng: 39.82620, detailAr: "أصل بئر زمزم المباركة",      detailEn: "Source of blessed Zamzam" },
+  { id: "w2", type: "water",    nameAr: "محطة مياه منى — الجمرات",    nameEn: "Mina Water — Jamarat Area",    lat: 21.41800, lng: 39.87500, detailAr: "مياه زمزم مجاناً",             detailEn: "Free Zamzam water" },
+  { id: "w3", type: "water",    nameAr: "محطة مياه منى — المخيمات",   nameEn: "Mina Water — Camps Area",      lat: 21.41200, lng: 39.89200, detailAr: "مياه معبأة مجاناً",            detailEn: "Free bottled water" },
+  { id: "w4", type: "water",    nameAr: "محطة مياه عرفات — نمرة",     nameEn: "Arafat Water — Nimrah Area",   lat: 21.35500, lng: 39.97200, detailAr: "مياه زمزم وعادية",            detailEn: "Zamzam & regular water" },
+  { id: "w5", type: "water",    nameAr: "محطة مياه مزدلفة",           nameEn: "Muzdalifah Water Station",     lat: 21.38880, lng: 39.93800, detailAr: "مياه متاحة طوال الليل",       detailEn: "Available all night" },
+  { id: "w6", type: "water",    nameAr: "نقطة مياه جسر الجمرات",      nameEn: "Jamarat Bridge Water Point",   lat: 21.41950, lng: 39.87030, detailAr: "قريبة من رمي الجمار",        detailEn: "Near stoning ritual area" },
+  { id: "m1", type: "mosque",   nameAr: "المسجد الحرام",              nameEn: "Grand Mosque",                 lat: 21.42250, lng: 39.82620, detailAr: "قبلة المسلمين",              detailEn: "Muslim Qibla direction" },
+  { id: "m2", type: "mosque",   nameAr: "مسجد نمرة — عرفات",         nameEn: "Nimrah Mosque — Arafat",       lat: 21.35296, lng: 39.96675, detailAr: "خطبة عرفة والظهر والعصر",    detailEn: "Arafat sermon & prayers" },
+  { id: "m3", type: "mosque",   nameAr: "مسجد الخيف — منى",          nameEn: "Al-Khayf Mosque — Mina",       lat: 21.41572, lng: 39.87863, detailAr: "صلاة أيام التشريق",          detailEn: "Tashreeq days prayers" },
+  { id: "m4", type: "mosque",   nameAr: "مسجد المشعر الحرام",        nameEn: "Mash'ar al-Haram Mosque",      lat: 21.38880, lng: 39.93600, detailAr: "الوقوف بالمشعر الحرام",     detailEn: "Night standing at Mash'ar" },
+  { id: "b1", type: "bathroom", nameAr: "دورات مياه — شمال الحرم",   nameEn: "Restrooms — North Haram",      lat: 21.42500, lng: 39.82550, detailAr: "نظيفة ومتاحة ٢٤ ساعة",      detailEn: "Clean, 24h available" },
+  { id: "b2", type: "bathroom", nameAr: "مرافق منى — الجمرات",       nameEn: "Mina Facilities — Jamarat",    lat: 21.41800, lng: 39.87000, detailAr: "قرب جسر الجمرات",           detailEn: "Near Jamarat Bridge" },
+  { id: "b3", type: "bathroom", nameAr: "مرافق منى — المخيمات",      nameEn: "Mina Facilities — Camps",      lat: 21.41200, lng: 39.89500, detailAr: "مع حمامات للاغتسال",        detailEn: "With shower facilities" },
+  { id: "b4", type: "bathroom", nameAr: "مرافق سهل عرفات",           nameEn: "Arafat Plain Restrooms",       lat: 21.35500, lng: 39.98000, detailAr: "موزعة على سهل عرفات",      detailEn: "Spread across Arafat plain" },
+  { id: "b5", type: "bathroom", nameAr: "مرافق مزدلفة",              nameEn: "Muzdalifah Restrooms",         lat: 21.38800, lng: 39.94000, detailAr: "متاحة طوال الليل",          detailEn: "Available all night" },
+  { id: "t1", type: "transport", nameAr: "موقف حافلات المسجد الحرام", nameEn: "Grand Mosque Bus Terminal",   lat: 21.42100, lng: 39.82400, detailAr: "حافلات لمنى وعرفات",        detailEn: "Buses to Mina & Arafat" },
+  { id: "t2", type: "transport", nameAr: "محطة مترو الحجاج — جمرات", nameEn: "Hajj Metro — Jamarat",        lat: 21.41950, lng: 39.87030, detailAr: "مترو الحجاج للمشاعر",       detailEn: "Pilgrim metro to holy sites" },
+  { id: "t3", type: "transport", nameAr: "محطة مترو الحجاج — عرفات", nameEn: "Hajj Metro — Arafat",         lat: 21.35500, lng: 39.98400, detailAr: "مترو للعودة لمزدلفة ومنى",   detailEn: "Metro back to Muzdalifah" },
+  { id: "t4", type: "transport", nameAr: "موقف مزدلفة — نقل ليلي",   nameEn: "Muzdalifah Night Transport",  lat: 21.38500, lng: 39.93200, detailAr: "نقل ليلي إلى منى",           detailEn: "Night buses to Mina" },
+];
+
+const TYPE_CFG: Record<FacilityType, { color: string; bg: string; emoji: string; labelAr: string; labelEn: string }> = {
+  hospital:  { color: "#B03A2E", bg: "#f5dedd", emoji: "🏥", labelAr: "المستشفيات",   labelEn: "Hospitals" },
+  water:     { color: "#1A5C8A", bg: "#d6e9f5", emoji: "💧", labelAr: "نقاط المياه",  labelEn: "Water" },
+  mosque:    { color: "#0E4D41", bg: "#d4ede6", emoji: "🕌", labelAr: "المساجد",      labelEn: "Mosques" },
+  bathroom:  { color: "#7B5E3A", bg: "#ede5d8", emoji: "🚻", labelAr: "دورات المياه", labelEn: "Restrooms" },
+  transport: { color: "#B7860B", bg: "#f5ecd6", emoji: "🚌", labelAr: "النقل",        labelEn: "Transport" },
+};
+
+function makeFacilityIcon(type: FacilityType) {
+  const cfg = TYPE_CFG[type];
+  return L.divIcon({
+    className: "",
+    html: `
+      <div style="
+        width:32px;height:32px;
+        background:${cfg.bg};
+        border:2.5px solid ${cfg.color};
+        border-radius:8px;
+        display:flex;align-items:center;justify-content:center;
+        font-size:15px;
+        box-shadow:0 2px 8px ${cfg.color}55;
+      ">${cfg.emoji}</div>
+    `,
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+  });
+}
+
+// ── Zone definitions ─────────────────────────────────────────────────────────
 
 interface Zone {
   id: string; nameAr: string; nameEn: string;
@@ -60,26 +128,15 @@ function makePilgrimIcon(emergency: boolean, expired: boolean, highlighted: bool
 function makeSupervisorIcon() {
   return L.divIcon({
     className: "",
-    html: `
-      <div style="
-        width:32px;height:32px;
-        display:flex;align-items:center;justify-content:center;
-        filter:drop-shadow(0 0 8px #2563EBCC);
-      ">
-        <div style="
-          width:22px;height:22px;
-          background:#2563EB;
-          border:3px solid #fff;
-          border-radius:5px;
-          transform:rotate(45deg);
-          box-shadow:0 2px 8px #2563EB99;
-        "></div>
-      </div>
-    `,
+    html: `<div style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 0 8px #2563EBCC);">
+      <div style="width:22px;height:22px;background:#2563EB;border:3px solid #fff;border-radius:5px;transform:rotate(45deg);box-shadow:0 2px 8px #2563EB99;"></div>
+    </div>`,
     iconSize: [32, 32],
     iconAnchor: [16, 16],
   });
 }
+
+// ── OSRM routing ──────────────────────────────────────────────────────────────
 
 interface NavStep { instruction: string; distanceM: number; type: string; modifier: string; }
 interface NavRoute {
@@ -87,16 +144,17 @@ interface NavRoute {
   distanceM: number;
   durationS: number;
   steps: NavStep[];
-  pilgrim: Pilgrim;
+  targetName: string;
+  targetColor: string;
 }
 
 function formatManeuver(step: any, ar: boolean): string {
   const type = step.maneuver?.type ?? "";
   const mod = step.maneuver?.modifier ?? "";
-  const name = step.name ? (ar ? step.name : step.name) : "";
+  const name = step.name || "";
   const on = name ? (ar ? ` في ${name}` : ` on ${name}`) : "";
   if (type === "depart") return ar ? `انطلق${on}` : `Head${on}`;
-  if (type === "arrive") return ar ? "وصلت إلى الحاج" : "Arrived at pilgrim";
+  if (type === "arrive") return ar ? "وصلت إلى وجهتك" : "Arrived at destination";
   if (mod === "left") return ar ? `انعطف يساراً${on}` : `Turn left${on}`;
   if (mod === "right") return ar ? `انعطف يميناً${on}` : `Turn right${on}`;
   if (mod === "sharp left") return ar ? `انعطف حاداً يساراً${on}` : `Sharp left${on}`;
@@ -106,7 +164,7 @@ function formatManeuver(step: any, ar: boolean): string {
   return ar ? `استمر${on}` : `Continue${on}`;
 }
 
-async function fetchOSRMRoute(ar: boolean, fromLat: number, fromLng: number, toLat: number, toLng: number, pilgrim: Pilgrim): Promise<NavRoute | null> {
+async function fetchOSRM(ar: boolean, fromLat: number, fromLng: number, toLat: number, toLng: number, targetName: string, targetColor: string): Promise<NavRoute | null> {
   try {
     const url = `https://router.project-osrm.org/route/v1/foot/${fromLng},${fromLat};${toLng},${toLat}?overview=full&geometries=geojson&steps=true`;
     const res = await fetch(url);
@@ -120,21 +178,17 @@ async function fetchOSRMRoute(ar: boolean, fromLat: number, fromLng: number, toL
       type: s.maneuver?.type ?? "",
       modifier: s.maneuver?.modifier ?? "",
     }));
-    return { coords, distanceM: Math.round(route.distance), durationS: Math.round(route.duration), steps, pilgrim };
-  } catch {
-    return null;
-  }
+    return { coords, distanceM: Math.round(route.distance), durationS: Math.round(route.duration), steps, targetName, targetColor };
+  } catch { return null; }
 }
 
-function formatDist(m: number, ar: boolean): string {
-  if (m >= 1000) return `${(m / 1000).toFixed(1)} ${ar ? "كم" : "km"}`;
-  return `${m} ${ar ? "م" : "m"}`;
+function formatDist(m: number, ar: boolean) {
+  return m >= 1000 ? `${(m / 1000).toFixed(1)} ${ar ? "كم" : "km"}` : `${m} ${ar ? "م" : "m"}`;
 }
-function formatDuration(s: number, ar: boolean): string {
+function formatDuration(s: number, ar: boolean) {
   const mins = Math.max(1, Math.round(s / 60));
   return ar ? `${mins} دقيقة` : `${mins} min`;
 }
-
 function stepIcon(type: string, modifier: string) {
   if (type === "arrive") return <MapPin className="w-3.5 h-3.5 text-primary flex-shrink-0" />;
   if (type === "depart") return <Footprints className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />;
@@ -143,6 +197,8 @@ function stepIcon(type: string, modifier: string) {
   if (modifier === "uturn") return <CornerDownLeft className="w-3.5 h-3.5 text-foreground/70 flex-shrink-0" />;
   return <ArrowUp className="w-3.5 h-3.5 text-foreground/70 flex-shrink-0" />;
 }
+
+// ── Map helper components ────────────────────────────────────────────────────
 
 function ZoomControls() {
   const map = useMap();
@@ -157,8 +213,7 @@ function ZoomControls() {
 function FitBounds() {
   const map = useMap();
   useEffect(() => {
-    const bounds = L.latLngBounds(HAJJ_ZONES.map(z => [z.lat, z.lng]));
-    map.fitBounds(bounds, { padding: [60, 60] });
+    map.fitBounds(L.latLngBounds(HAJJ_ZONES.map(z => [z.lat, z.lng])), { padding: [60, 60] });
   }, [map]);
   return null;
 }
@@ -178,12 +233,14 @@ function FitRouteBounds({ coords }: { coords: [number, number][] }) {
   return null;
 }
 
+// ── Pilgrim marker ───────────────────────────────────────────────────────────
+
 interface PilgrimMarkerProps {
   pilgrim: Pilgrim;
   isHighlighted: boolean;
   ar: boolean;
   isRTL: boolean;
-  onNavigate: (pilgrim: Pilgrim) => void;
+  onNavigate: (lat: number, lng: number, name: string, color: string) => void;
 }
 
 function PilgrimMarker({ pilgrim, isHighlighted, ar, isRTL, onNavigate }: PilgrimMarkerProps) {
@@ -205,8 +262,7 @@ function PilgrimMarker({ pilgrim, isHighlighted, ar, isRTL, onNavigate }: Pilgri
           <div style={{ fontWeight: 800, fontSize: 14, marginBottom: 4, color: "#0E4D41" }}>{pilgrim.name}</div>
           <div style={{ fontSize: 12, color: "#888", marginBottom: 4 }}>{pilgrim.nationality}</div>
           <div style={{ fontSize: 12, marginBottom: 3 }}>
-            {ar ? "المجموعة:" : "Group:"}{" "}
-            <span style={{ color: "#444" }}>{pilgrim.campaignGroup ?? "—"}</span>
+            {ar ? "المجموعة:" : "Group:"}{" "}<span style={{ color: "#444" }}>{pilgrim.campaignGroup ?? "—"}</span>
           </div>
           <div style={{ fontSize: 12, marginBottom: 8 }}>
             {ar ? "التصريح:" : "Permit:"}{" "}
@@ -220,24 +276,15 @@ function PilgrimMarker({ pilgrim, isHighlighted, ar, isRTL, onNavigate }: Pilgri
             </div>
           )}
           <button
-            onClick={() => onNavigate(pilgrim)}
-            style={{
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-              width: "100%", padding: "7px 12px", marginBottom: 6,
-              background: "#2563EB", color: "#fff", borderRadius: 8,
-              fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer",
-            }}
+            onClick={() => onNavigate(pilgrim.locationLat!, pilgrim.locationLng!, pilgrim.name, "#2563EB")}
+            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%", padding: "7px 12px", marginBottom: 6, background: "#2563EB", color: "#fff", borderRadius: 8, fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer" }}
           >
             <span style={{ fontSize: 14 }}>🧭</span>
             {ar ? "انقلني إليه" : "Navigate to pilgrim"}
           </button>
           <a
             href={`/pilgrims?pilgrimId=${pilgrim.id}`}
-            style={{
-              display: "block", textAlign: "center", padding: "6px 12px",
-              background: "#0E4D41", color: "#fff", borderRadius: 8,
-              fontSize: 12, fontWeight: 700, textDecoration: "none",
-            }}
+            style={{ display: "block", textAlign: "center", padding: "6px 12px", background: "#0E4D41", color: "#fff", borderRadius: 8, fontSize: 12, fontWeight: 700, textDecoration: "none" }}
           >
             {ar ? "عرض الملف الشخصي" : "View Profile"}
           </a>
@@ -246,6 +293,51 @@ function PilgrimMarker({ pilgrim, isHighlighted, ar, isRTL, onNavigate }: Pilgri
     </Marker>
   );
 }
+
+// ── Facility marker ───────────────────────────────────────────────────────────
+
+interface FacilityMarkerProps {
+  facility: Facility;
+  ar: boolean;
+  isRTL: boolean;
+  onNavigate: (lat: number, lng: number, name: string, color: string) => void;
+}
+
+function FacilityMarker({ facility, ar, isRTL, onNavigate }: FacilityMarkerProps) {
+  const cfg = TYPE_CFG[facility.type];
+  return (
+    <Marker position={[facility.lat, facility.lng]} icon={makeFacilityIcon(facility.type)} zIndexOffset={500}>
+      <Popup>
+        <div style={{ fontFamily: "sans-serif", minWidth: 185, direction: isRTL ? "rtl" : "ltr" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 5 }}>
+            <span style={{ fontSize: 18 }}>{cfg.emoji}</span>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: 13, color: cfg.color }}>{ar ? facility.nameAr : facility.nameEn}</div>
+              <div style={{ fontSize: 11, color: "#888" }}>{ar ? cfg.labelAr : cfg.labelEn}</div>
+            </div>
+          </div>
+          {(ar ? facility.detailAr : facility.detailEn) && (
+            <div style={{ fontSize: 11, color: "#555", marginBottom: 8, padding: "4px 8px", background: cfg.bg, borderRadius: 6 }}>
+              {ar ? facility.detailAr : facility.detailEn}
+            </div>
+          )}
+          <button
+            onClick={() => onNavigate(facility.lat, facility.lng, ar ? facility.nameAr : facility.nameEn, cfg.color)}
+            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%", padding: "7px 12px", background: cfg.color, color: "#fff", borderRadius: 8, fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer" }}
+          >
+            <span style={{ fontSize: 13 }}>🧭</span>
+            {ar ? "انقلني إليه" : "Navigate here"}
+          </button>
+        </div>
+      </Popup>
+      <Tooltip direction="top" offset={[0, -6]} opacity={0.9}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: cfg.color }}>{ar ? facility.nameAr : facility.nameEn}</span>
+      </Tooltip>
+    </Marker>
+  );
+}
+
+// ── Main RealMap component ───────────────────────────────────────────────────
 
 interface RealMapProps {
   pilgrims?: Pilgrim[];
@@ -261,10 +353,10 @@ export function RealMap({ pilgrims, sectorData, onZoneClick, highlightedPilgrimI
   const [selectedZone, setSelectedZone] = useState<Zone | null>(null);
   const [navRoute, setNavRoute] = useState<NavRoute | null>(null);
   const [loadingNav, setLoadingNav] = useState(false);
+  const [showServices, setShowServices] = useState(false);
+  const [activeTypes, setActiveTypes] = useState<Set<FacilityType>>(new Set(["hospital", "water", "mosque", "bathroom", "transport"]));
 
-  const highlightedPilgrim = highlightedPilgrimId
-    ? pilgrims?.find(p => p.id === highlightedPilgrimId)
-    : undefined;
+  const highlightedPilgrim = highlightedPilgrimId ? pilgrims?.find(p => p.id === highlightedPilgrimId) : undefined;
 
   const enrichedZones = HAJJ_ZONES.map(z => {
     const sector = sectorData.find(s => s.id === z.sectorId);
@@ -279,58 +371,55 @@ export function RealMap({ pilgrims, sectorData, onZoneClick, highlightedPilgrimI
     onZoneClick?.(zone);
   }, [onZoneClick]);
 
-  const handleNavigate = useCallback(async (pilgrim: Pilgrim) => {
-    if (!pilgrim.locationLat || !pilgrim.locationLng) return;
+  const handleNavigate = useCallback(async (lat: number, lng: number, targetName: string, targetColor: string) => {
     setLoadingNav(true);
     setNavRoute(null);
-    const route = await fetchOSRMRoute(ar, SUPERVISOR_POS.lat, SUPERVISOR_POS.lng, pilgrim.locationLat, pilgrim.locationLng, pilgrim);
+    const route = await fetchOSRM(ar, SUPERVISOR_POS.lat, SUPERVISOR_POS.lng, lat, lng, targetName, targetColor);
     setLoadingNav(false);
     if (!route) {
       toast({ title: ar ? "تعذّر حساب المسار" : "Route unavailable", description: ar ? "لم نتمكن من الاتصال بخدمة التوجيه." : "Could not connect to routing service.", variant: "destructive" });
       return;
     }
-    route.pilgrim = pilgrim;
     setNavRoute(route);
     setSelectedZone(null);
   }, [ar, toast]);
+
+  const toggleType = (type: FacilityType) => {
+    setActiveTypes(prev => {
+      const next = new Set(prev);
+      next.has(type) ? next.delete(type) : next.add(type);
+      return next;
+    });
+  };
+
+  const visibleFacilities = showServices ? FACILITIES.filter(f => activeTypes.has(f.type)) : [];
 
   return (
     <div className="relative w-full h-full" style={{ minHeight: 300, isolation: "isolate" }}>
       <MapContainer
         center={[21.4225, 39.8900]}
         zoom={12}
-        scrollWheelZoom={true}
-        touchZoom={true}
-        doubleClickZoom={true}
-        dragging={true}
-        zoomControl={false}
-        attributionControl={false}
+        scrollWheelZoom={true} touchZoom={true} doubleClickZoom={true} dragging={true}
+        zoomControl={false} attributionControl={false}
         style={{ width: "100%", height: "100%", background: "#f5f5f0", position: "absolute", inset: 0 }}
       >
         <TileLayer
           url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
           attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-          subdomains="abcd"
-          maxZoom={20}
+          subdomains="abcd" maxZoom={20}
         />
-
         <ZoomControls />
         <FitBounds />
-
         {highlightedPilgrim?.locationLat && highlightedPilgrim?.locationLng && !navRoute && (
           <FlyToHighlighted lat={highlightedPilgrim.locationLat} lng={highlightedPilgrim.locationLng} />
         )}
-
         {navRoute && <FitRouteBounds coords={navRoute.coords} />}
 
         {/* Zone circles */}
         {enrichedZones.map(zone => {
           const { stroke, fill } = zoneColor(zone.status);
           return (
-            <Circle
-              key={zone.id}
-              center={[zone.lat, zone.lng]}
-              radius={zone.radius}
+            <Circle key={zone.id} center={[zone.lat, zone.lng]} radius={zone.radius}
               pathOptions={{ color: stroke, fillColor: fill, fillOpacity: 1, weight: zone.status === "warning" ? 2.5 : 1.5, dashArray: zone.status === "warning" ? "6 4" : undefined }}
               eventHandlers={{ click: () => handleZoneClick(zone) }}
             >
@@ -354,37 +443,91 @@ export function RealMap({ pilgrims, sectorData, onZoneClick, highlightedPilgrimI
             </div>
           </Popup>
           <Tooltip direction="top" offset={[0, -10]} opacity={0.95} permanent>
-            <span style={{ fontWeight: 700, fontSize: 11, color: "#2563EB" }}>
-              {ar ? "المشرف" : "Supervisor"}
-            </span>
+            <span style={{ fontWeight: 700, fontSize: 11, color: "#2563EB" }}>{ar ? "المشرف" : "Supervisor"}</span>
           </Tooltip>
         </Marker>
 
         {/* Route polyline */}
         {navRoute && (
-          <Polyline
-            positions={navRoute.coords}
-            pathOptions={{ color: "#2563EB", weight: 5, opacity: 0.85, dashArray: "10 6", lineCap: "round", lineJoin: "round" }}
+          <Polyline positions={navRoute.coords}
+            pathOptions={{ color: navRoute.targetColor, weight: 5, opacity: 0.85, dashArray: "10 6", lineCap: "round", lineJoin: "round" }}
           />
         )}
+
+        {/* Facility markers */}
+        {visibleFacilities.map(f => (
+          <FacilityMarker key={f.id} facility={f} ar={ar} isRTL={isRTL} onNavigate={handleNavigate} />
+        ))}
 
         {/* Pilgrim markers */}
         {pilgrims?.map(pilgrim => {
           if (!pilgrim.locationLat || !pilgrim.locationLng) return null;
           return (
             <PilgrimMarker
-              key={pilgrim.id}
-              pilgrim={pilgrim}
+              key={pilgrim.id} pilgrim={pilgrim}
               isHighlighted={pilgrim.id === highlightedPilgrimId}
-              ar={ar}
-              isRTL={isRTL}
-              onNavigate={handleNavigate}
+              ar={ar} isRTL={isRTL} onNavigate={handleNavigate}
             />
           );
         })}
       </MapContainer>
 
-      {/* Zone info popup */}
+      {/* ── Services toggle button ────────────────────────────────────────── */}
+      <motion.button
+        data-testid="button-toggle-services"
+        onClick={() => setShowServices(v => !v)}
+        whileTap={{ scale: 0.93 }}
+        className={`absolute bottom-16 ${isRTL ? "right-4" : "left-4"} flex items-center gap-2 px-3 py-2.5 rounded-xl shadow-xl border text-xs font-bold transition-all ${
+          showServices
+            ? "bg-primary text-primary-foreground border-primary/50 shadow-primary/30"
+            : "bg-card/95 backdrop-blur-xl text-foreground border-border"
+        }`}
+        style={{ zIndex: 860 }}
+        dir={isRTL ? "rtl" : "ltr"}
+      >
+        <Layers className="w-4 h-4 flex-shrink-0" />
+        {ar ? "الخدمات" : "Services"}
+        {showServices && <span className="w-1.5 h-1.5 rounded-full bg-primary-foreground animate-pulse" />}
+      </motion.button>
+
+      {/* ── Filter chips (visible only when showServices is ON) ───────────── */}
+      <AnimatePresence>
+        {showServices && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            className={`absolute bottom-36 ${isRTL ? "right-4" : "left-4"} flex flex-col gap-1.5`}
+            style={{ zIndex: 855 }}
+            dir={isRTL ? "rtl" : "ltr"}
+          >
+            {(Object.entries(TYPE_CFG) as [FacilityType, typeof TYPE_CFG[FacilityType]][]).map(([type, cfg]) => {
+              const active = activeTypes.has(type);
+              const count = FACILITIES.filter(f => f.type === type).length;
+              return (
+                <motion.button
+                  key={type}
+                  whileTap={{ scale: 0.94 }}
+                  onClick={() => toggleType(type)}
+                  className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-bold border transition-all shadow-sm ${isRTL ? "flex-row-reverse" : ""}`}
+                  style={{
+                    background: active ? cfg.bg : "#f5f5f5",
+                    borderColor: active ? cfg.color : "#ddd",
+                    color: active ? cfg.color : "#999",
+                    opacity: active ? 1 : 0.6,
+                  }}
+                >
+                  <span>{cfg.emoji}</span>
+                  <span>{ar ? cfg.labelAr : cfg.labelEn}</span>
+                  <span className="text-[10px] opacity-60">({count})</span>
+                </motion.button>
+              );
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Zone info popup ───────────────────────────────────────────────── */}
       <AnimatePresence>
         {selectedZone && (
           <motion.div
@@ -457,7 +600,7 @@ export function RealMap({ pilgrims, sectorData, onZoneClick, highlightedPilgrimI
         )}
       </AnimatePresence>
 
-      {/* Navigation panel */}
+      {/* ── Navigation panel ──────────────────────────────────────────────── */}
       <AnimatePresence>
         {navRoute && (
           <motion.div
@@ -470,14 +613,13 @@ export function RealMap({ pilgrims, sectorData, onZoneClick, highlightedPilgrimI
             style={{ zIndex: 860, maxHeight: "42%" }}
             dir={isRTL ? "rtl" : "ltr"}
           >
-            {/* Header */}
             <div className={`flex items-center gap-3 px-4 pt-3 pb-2 border-b border-border ${isRTL ? "flex-row-reverse" : ""}`}>
-              <div className="w-9 h-9 rounded-xl bg-blue-500/15 flex items-center justify-center flex-shrink-0">
-                <Navigation className="w-4 h-4 text-blue-500" />
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: navRoute.targetColor + "22" }}>
+                <Navigation className="w-4 h-4" style={{ color: navRoute.targetColor }} />
               </div>
               <div className={`flex-1 min-w-0 ${isRTL ? "text-right" : ""}`}>
                 <div className="font-bold text-sm text-foreground truncate">
-                  {ar ? `التوجه إلى: ${navRoute.pilgrim.name}` : `Navigate to: ${navRoute.pilgrim.name}`}
+                  {ar ? `التوجه إلى: ${navRoute.targetName}` : `Navigate to: ${navRoute.targetName}`}
                 </div>
                 <div className={`flex items-center gap-3 text-xs text-muted-foreground mt-0.5 ${isRTL ? "flex-row-reverse" : ""}`}>
                   <span className={`flex items-center gap-1 ${isRTL ? "flex-row-reverse" : ""}`}>
@@ -493,19 +635,13 @@ export function RealMap({ pilgrims, sectorData, onZoneClick, highlightedPilgrimI
               <button
                 onClick={() => setNavRoute(null)}
                 className="p-1.5 rounded-lg hover:bg-destructive/10 hover:text-destructive transition-colors flex-shrink-0 text-muted-foreground"
-                title={ar ? "إنهاء التنقل" : "End navigation"}
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
-
-            {/* Steps */}
             <div className="overflow-y-auto px-3 py-2" style={{ maxHeight: 180 }}>
               {navRoute.steps.filter(s => s.distanceM > 0 || s.type === "arrive").map((step, i) => (
-                <div
-                  key={i}
-                  className={`flex items-center gap-3 py-2 border-b border-border/40 last:border-0 ${isRTL ? "flex-row-reverse" : ""}`}
-                >
+                <div key={i} className={`flex items-center gap-3 py-2 border-b border-border/40 last:border-0 ${isRTL ? "flex-row-reverse" : ""}`}>
                   <div className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
                     {stepIcon(step.type, step.modifier)}
                   </div>
@@ -520,13 +656,11 @@ export function RealMap({ pilgrims, sectorData, onZoneClick, highlightedPilgrimI
         )}
       </AnimatePresence>
 
-      {/* Loading nav spinner */}
+      {/* ── Loading spinner ───────────────────────────────────────────────── */}
       <AnimatePresence>
         {loadingNav && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-sm"
             style={{ zIndex: 870 }}
           >
@@ -538,13 +672,11 @@ export function RealMap({ pilgrims, sectorData, onZoneClick, highlightedPilgrimI
         )}
       </AnimatePresence>
 
-      {/* Highlighted pilgrim banner */}
+      {/* ── Highlighted pilgrim banner ────────────────────────────────────── */}
       <AnimatePresence>
         {highlightedPilgrim && !navRoute && (
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
+            initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
             className={`absolute top-4 ${isRTL ? "left-16" : "right-16"} flex items-center gap-2 bg-card/95 backdrop-blur-xl border border-border text-foreground text-xs font-bold px-3 py-2 rounded-xl shadow-lg`}
             style={{ zIndex: 850 }}
             dir={isRTL ? "rtl" : "ltr"}
@@ -555,7 +687,7 @@ export function RealMap({ pilgrims, sectorData, onZoneClick, highlightedPilgrimI
         )}
       </AnimatePresence>
 
-      {/* Legend */}
+      {/* ── Legend ────────────────────────────────────────────────────────── */}
       <div className={`absolute top-4 ${isRTL ? "left-4" : "right-4"} bg-card/92 backdrop-blur-xl border border-border rounded-xl p-3 shadow-xl`} style={{ zIndex: 850 }} dir={isRTL ? "rtl" : "ltr"}>
         <div className="text-xs font-bold text-muted-foreground mb-2 uppercase tracking-wider">{ar ? "مستوى الازدحام" : "Density"}</div>
         {[
@@ -570,22 +702,17 @@ export function RealMap({ pilgrims, sectorData, onZoneClick, highlightedPilgrimI
           </div>
         ))}
         <div className="border-t border-border/50 mt-2 pt-2">
-          <div className={`flex items-center gap-2 text-xs mb-1 ${isRTL ? "flex-row-reverse" : ""}`}>
-            <span className="w-3 h-3 rounded-full bg-emerald-500 flex-shrink-0" />
-            <span className="text-foreground/80">{ar ? "حاج طبيعي" : "Normal"}</span>
-          </div>
-          <div className={`flex items-center gap-2 text-xs mb-1 ${isRTL ? "flex-row-reverse" : ""}`}>
-            <span className="w-3 h-3 rounded-full bg-amber-400 flex-shrink-0" />
-            <span className="text-foreground/80">{ar ? "تصريح منتهي" : "Expired Permit"}</span>
-          </div>
-          <div className={`flex items-center gap-2 text-xs mb-1.5 ${isRTL ? "flex-row-reverse" : ""}`}>
-            <span className="w-3 h-3 rounded-full bg-red-500 flex-shrink-0" />
-            <span className="text-foreground/80">{ar ? "حالة طوارئ" : "Emergency"}</span>
-          </div>
-          <div className={`flex items-center gap-2 text-xs ${isRTL ? "flex-row-reverse" : ""}`}>
-            <span className="w-3 h-3 rounded bg-blue-500 flex-shrink-0" style={{ transform: "rotate(45deg)", borderRadius: 2 }} />
-            <span className="text-foreground/80">{ar ? "المشرف" : "Supervisor"}</span>
-          </div>
+          {[
+            { node: <span className="w-3 h-3 rounded-full bg-emerald-500 flex-shrink-0" />, label: ar ? "حاج طبيعي" : "Normal" },
+            { node: <span className="w-3 h-3 rounded-full bg-amber-400 flex-shrink-0" />, label: ar ? "منتهي التصريح" : "Expired" },
+            { node: <span className="w-3 h-3 rounded-full bg-red-500 flex-shrink-0" />, label: ar ? "طوارئ" : "Emergency" },
+            { node: <span className="w-3 h-3 rounded flex-shrink-0 bg-blue-500" style={{ transform: "rotate(45deg)", borderRadius: 2 }} />, label: ar ? "المشرف" : "Supervisor" },
+          ].map((row, i) => (
+            <div key={i} className={`flex items-center gap-2 text-xs mb-1 last:mb-0 ${isRTL ? "flex-row-reverse" : ""}`}>
+              {row.node}
+              <span className="text-foreground/80">{row.label}</span>
+            </div>
+          ))}
         </div>
       </div>
 
