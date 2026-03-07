@@ -47,7 +47,7 @@ export function PilgrimLayout({ children }: { children: React.ReactNode }) {
       {/* Pilgrim info card */}
       <div className="mx-4 mt-4 p-3 rounded-2xl bg-gradient-to-b from-[#f5e6c8] to-white dark:from-[#3a2a12] dark:to-card border border-[#e8d4a0] dark:border-border">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-lg font-bold text-primary-foreground flex-shrink-0 shadow-sm">أ</div>
+          <div className="w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold flex-shrink-0 shadow-sm" style={{ background: "#d4a853", color: "#fff" }}>أ</div>
           <div>
             <div className="font-bold text-sm text-foreground">{ar ? "أحمد علي" : "Ahmed Ali"}</div>
             <div className="text-muted-foreground text-[10px] mt-0.5">{ar ? "حملة التوحيد · مكة المكرمة" : "Al-Tawheed · Makkah"}</div>
@@ -66,7 +66,7 @@ export function PilgrimLayout({ children }: { children: React.ReactNode }) {
               onClick={() => setMobileOpen(false)}
               className={`flex items-center gap-3 px-4 py-2.5 rounded-2xl transition-all duration-200 font-medium text-sm
                 ${active
-                  ? "bg-primary text-primary-foreground shadow-sm"
+                  ? "bg-[#f5e6c8] text-[#7a5020] border border-[#e8d4a0] shadow-sm"
                   : "text-muted-foreground hover:bg-secondary hover:text-primary"
                 }
               `}

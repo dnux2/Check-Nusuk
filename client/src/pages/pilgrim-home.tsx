@@ -71,36 +71,36 @@ export function PilgrimHomePage() {
         {/* Welcome banner */}
         <motion.div
           initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-          className="rounded-3xl overflow-hidden"
-          style={{ background: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(157 50% 30%) 100%)" }}
+          className="rounded-3xl overflow-hidden border border-[#e8d4a0]"
+          style={{ background: "linear-gradient(160deg, #f5e6c8 0%, #ffffff 100%)" }}
         >
           <div className="px-6 pt-5 pb-4">
-            <div className="text-xs font-semibold text-primary-foreground/60 mb-1">
+            <div className="text-xs font-semibold text-[#a07830]/70 mb-1">
               ٢٩ ذو الحجة ١٤٤٦
             </div>
-            <h1 className="text-xl font-bold text-primary-foreground mb-0.5">
+            <h1 className="text-xl font-bold text-[#5a3e1b] mb-0.5">
               {ar ? `مرحباً، ${pilgrim?.name?.split(" ")[0] || "أحمد"} 👋` : `Welcome, ${pilgrim?.name?.split(" ")[0] || "Ahmed"} 👋`}
             </h1>
-            <p className="text-sm text-primary-foreground/70">
+            <p className="text-sm text-[#7a5a2a]/80">
               {ar ? "تقبّل الله حجكم ومناسككم" : "May Allah accept your pilgrimage"}
             </p>
           </div>
-          <div className="flex border-t border-white/15">
-            <div className="flex-1 px-4 py-3 border-e border-white/15 text-center">
-              <div className="text-[10px] text-primary-foreground/50 mb-1">{ar ? "التصريح" : "Permit"}</div>
+          <div className="flex border-t border-[#e8d4a0]">
+            <div className="flex-1 px-4 py-3 border-e border-[#e8d4a0] text-center">
+              <div className="text-[10px] text-[#a07830]/60 mb-1">{ar ? "التصريح" : "Permit"}</div>
               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${permitClass}`}>{permitLabel}</span>
             </div>
-            <div className="flex-1 px-4 py-3 border-e border-white/15 text-center">
-              <div className="text-[10px] text-primary-foreground/50 mb-1">{ar ? "الصحة" : "Health"}</div>
-              <div className="text-xs font-bold text-primary-foreground">
+            <div className="flex-1 px-4 py-3 border-e border-[#e8d4a0] text-center">
+              <div className="text-[10px] text-[#a07830]/60 mb-1">{ar ? "الصحة" : "Health"}</div>
+              <div className="text-xs font-bold text-[#5a3e1b]">
                 {pilgrim?.healthStatus === "NeedsAttention" ? (ar ? "تحتاج متابعة" : "Needs Attention")
                   : pilgrim?.healthStatus === "Stable" ? (ar ? "مستقرة" : "Stable")
                   : (ar ? "جيدة ✓" : "Good ✓")}
               </div>
             </div>
             <div className="flex-1 px-4 py-3 text-center">
-              <div className="text-[10px] text-primary-foreground/50 mb-1">{ar ? "الطقس" : "Weather"}</div>
-              <div className="text-xs font-bold text-primary-foreground">42°C ☀️</div>
+              <div className="text-[10px] text-[#a07830]/60 mb-1">{ar ? "الطقس" : "Weather"}</div>
+              <div className="text-xs font-bold text-[#5a3e1b]">42°C ☀️</div>
             </div>
           </div>
         </motion.div>
