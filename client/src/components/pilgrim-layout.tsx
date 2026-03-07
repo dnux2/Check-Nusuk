@@ -85,16 +85,16 @@ export function PilgrimLayout({ children }: { children: React.ReactNode }) {
       {/* Bottom section */}
       <div className="px-4 pb-6 space-y-3 border-t border-border pt-4">
         {/* Language toggle */}
-        <div className="flex items-center bg-secondary rounded-2xl overflow-hidden border border-border">
+        <div className="flex items-center bg-secondary rounded-lg overflow-hidden border border-border">
           <button
             onClick={() => setLang("ar")}
-            className={`flex-1 py-2 text-xs font-bold transition-all ${lang === "ar" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+            className={`flex-1 py-1.5 text-xs font-bold transition-all ${lang === "ar" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
           >
-            العربية
+            ع
           </button>
           <button
             onClick={() => setLang("en")}
-            className={`flex-1 py-2 text-xs font-bold transition-all ${lang === "en" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+            className={`flex-1 py-1.5 text-xs font-bold transition-all ${lang === "en" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
           >
             EN
           </button>

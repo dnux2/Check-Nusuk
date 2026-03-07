@@ -146,24 +146,19 @@ export function Layout({ children }: { children: React.ReactNode }) {
         style={{ willChange: "margin" }}
       >
         {/* Header */}
-        <header className={`h-20 flex-shrink-0 border-b border-border bg-card/80 backdrop-blur-md flex items-center justify-between px-6 z-10 ${isRTL ? "flex-row-reverse" : ""}`}>
-          <div className={`flex items-center gap-3 ${isRTL ? "flex-row-reverse" : ""}`}>
-            {/* Sidebar toggle — visible on all screen sizes */}
+        <header className={`h-16 flex-shrink-0 border-b border-border bg-card/80 backdrop-blur-md flex items-center justify-between px-4 z-10 ${isRTL ? "flex-row-reverse" : ""}`}>
+          <div className={`flex items-center gap-2 ${isRTL ? "flex-row-reverse" : ""}`}>
+            {/* Sidebar toggle */}
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2.5 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors text-foreground border border-border"
+              className="p-2 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors text-foreground border border-border"
               data-testid="button-sidebar-toggle"
               aria-label="Toggle sidebar"
             >
               <Menu className="w-5 h-5" />
             </button>
-            <h2 className="font-bold text-xl text-foreground hidden sm:block">
-              {currentPage}
-            </h2>
-          </div>
 
-          <div className={`flex items-center gap-3 ${isRTL ? "flex-row-reverse" : ""}`}>
-            {/* Language Toggle */}
+            {/* Language Toggle — next to hamburger */}
             <div className="flex items-center bg-secondary rounded-lg overflow-hidden border border-border">
               <button
                 data-testid="button-lang-en"
@@ -185,21 +180,25 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </button>
             </div>
 
+            {/* Bell — next to lang toggle */}
             <button className="relative p-2 rounded-full hover:bg-secondary transition-colors">
               <Bell className="w-5 h-5 text-muted-foreground" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-destructive animate-pulse" />
             </button>
 
-            <div className="h-8 w-px bg-border mx-1" />
+            <h2 className="font-bold text-lg text-foreground hidden sm:block ms-1">
+              {currentPage}
+            </h2>
+          </div>
 
-            <div className={`flex items-center gap-3 ${isRTL ? "flex-row-reverse" : ""}`}>
-              <div className={`hidden sm:block ${isRTL ? "text-right" : "text-right"}`}>
-                <p className="text-sm font-bold text-foreground">{t("adminSupervisor")}</p>
-                <p className="text-xs text-muted-foreground">{t("sector")}</p>
-              </div>
-              <div className="w-10 h-10 rounded-full bg-accent text-accent-foreground flex items-center justify-center font-bold shadow-sm flex-shrink-0">
-                AS
-              </div>
+          {/* Admin info — right side only */}
+          <div className={`flex items-center gap-3 ${isRTL ? "flex-row-reverse" : ""}`}>
+            <div className={`hidden sm:block ${isRTL ? "text-right" : "text-right"}`}>
+              <p className="text-sm font-bold text-foreground">{t("adminSupervisor")}</p>
+              <p className="text-xs text-muted-foreground">{t("sector")}</p>
+            </div>
+            <div className="w-9 h-9 rounded-full bg-accent text-accent-foreground flex items-center justify-center font-bold shadow-sm flex-shrink-0 text-sm">
+              AS
             </div>
           </div>
         </header>
