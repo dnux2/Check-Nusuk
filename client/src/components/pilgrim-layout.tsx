@@ -45,7 +45,7 @@ export function PilgrimLayout({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Pilgrim info card */}
-      <div className="mx-4 mt-4 p-3 rounded-2xl bg-secondary border border-border">
+      <div className="mx-4 mt-4 p-3 rounded-2xl bg-gradient-to-b from-[#f5e6c8] to-white dark:from-[#3a2a12] dark:to-card border border-[#e8d4a0] dark:border-border">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-lg font-bold text-primary-foreground flex-shrink-0 shadow-sm">أ</div>
           <div>
