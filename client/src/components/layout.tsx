@@ -131,7 +131,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               localStorage.removeItem("isLoggedIn");
               localStorage.removeItem("role");
               localStorage.removeItem("username");
-              window.location.replace("/login?tab=supervisor");
+              window.location.replace("/");
             }}
             data-testid="btn-logout-supervisor"
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer text-destructive hover:bg-destructive/10 transition-colors ${isRTL ? "flex-row-reverse" : ""}`}

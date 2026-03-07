@@ -87,7 +87,7 @@ export function PilgrimLayout({ children }: { children: React.ReactNode }) {
             localStorage.removeItem("isLoggedIn");
             localStorage.removeItem("role");
             localStorage.removeItem("passport");
-            window.location.replace("/login?tab=pilgrim");
+            window.location.replace("/");
           }}
           className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-2xl transition-all duration-200 font-medium text-sm text-destructive/80 hover:bg-destructive/10 hover:text-destructive ${isRTL ? "flex-row-reverse" : ""}`}
           data-testid="btn-logout-pilgrim"
