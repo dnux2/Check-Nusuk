@@ -192,6 +192,8 @@ interface NavRoute {
   totalDistM: number;
   totalDurationS: number;
   destination: Facility;
+  startLat: number;
+  startLng: number;
 }
 
 function maneuverToStep(type: string, modifier: string | undefined, name: string): { icon: string; textAr: string; textEn: string } {
@@ -717,6 +719,8 @@ export function PilgrimGuideMap() {
         totalDistM: route.distance,
         totalDurationS: route.duration,
         destination: facility,
+        startLat: myLat,
+        startLng: myLng,
       };
 
       setNavRoute(navData);
@@ -743,6 +747,7 @@ export function PilgrimGuideMap() {
           { icon: "🏁", textAr: "وصلت إلى وجهتك", textEn: "You have arrived", distanceM: 0, durationS: 0 },
         ],
         totalDistM: distM, totalDurationS: durationS, destination: facility,
+        startLat: myLat, startLng: myLng,
       });
       setRemainingM(distM);
       setRemainingS(durationS);
@@ -1104,10 +1109,15 @@ export function PilgrimGuideMap() {
           )}
           {navRoute && <FitRoute coords={navRoute.coords} />}
 
-          {customOrigin && (
+          {/* Custom origin marker — frozen to navRoute start during navigation */}
+          {customOrigin && !navRoute && (
             <Marker position={[customOrigin.lat, customOrigin.lng]} icon={makeCustomOriginIcon()} zIndexOffset={1000} />
           )}
-          <PilgrimDot lat={myLat} lng={myLng} ar={ar} />
+          {navRoute && customOrigin && (
+            <Marker position={[navRoute.startLat, navRoute.startLng]} icon={makeCustomOriginIcon()} zIndexOffset={1000} />
+          )}
+          {/* Pilgrim dot: frozen to route start during navigation, live otherwise */}
+          <PilgrimDot lat={navRoute ? navRoute.startLat : myLat} lng={navRoute ? navRoute.startLng : myLng} ar={ar} />
 
           {navRoute && (
             <>
