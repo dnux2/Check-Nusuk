@@ -1,14 +1,13 @@
 import "leaflet/dist/leaflet.css";
 import { useEffect, useRef, useState, useCallback } from "react";
-import { MapContainer, TileLayer, Circle, Marker, Popup, Tooltip, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Circle, Marker, Popup, Tooltip, useMap, Polyline } from "react-leaflet";
 import L from "leaflet";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, AlertTriangle, MapPin, Activity, Navigation } from "lucide-react";
+import { X, AlertTriangle, MapPin, Activity, Navigation, Clock, ChevronRight, Footprints, ArrowLeft, ArrowRight, ArrowUp, CornerDownLeft, CornerUpLeft, CornerUpRight } from "lucide-react";
 import { type Pilgrim } from "@shared/schema";
 import { useLanguage } from "@/contexts/language-context";
 import { useToast } from "@/hooks/use-toast";
 
-// Fix default icon paths broken by Vite bundling
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
@@ -17,70 +16,23 @@ L.Icon.Default.mergeOptions({
 });
 
 interface Zone {
-  id: string;
-  nameAr: string;
-  nameEn: string;
-  lat: number;
-  lng: number;
-  radius: number;
-  pilgrimCount: number;
-  capacity: number;
+  id: string; nameAr: string; nameEn: string;
+  lat: number; lng: number; radius: number;
+  pilgrimCount: number; capacity: number;
   status: "normal" | "busy" | "warning" | "empty";
-  sectorId: string;
-  ritualAr: string;
-  ritualEn: string;
-  descAr: string;
-  descEn: string;
+  sectorId: string; ritualAr: string; ritualEn: string;
+  descAr: string; descEn: string;
 }
 
 const HAJJ_ZONES: Zone[] = [
-  {
-    id: "haram",
-    nameAr: "المسجد الحرام",
-    nameEn: "Grand Mosque",
-    lat: 21.4225, lng: 39.8262, radius: 600,
-    pilgrimCount: 42000, capacity: 60000, status: "busy", sectorId: "S5",
-    ritualAr: "الطواف والسعي", ritualEn: "Tawaf & Sa'i",
-    descAr: "المسجد الأعظم في العالم — قلب الإسلام ومقصد الحجاج والمعتمرين",
-    descEn: "The largest mosque in the world — the heart of Islam",
-  },
-  {
-    id: "mina",
-    nameAr: "مِنىٰ", nameEn: "Mina",
-    lat: 21.4133, lng: 39.8907, radius: 1800,
-    pilgrimCount: 38000, capacity: 50000, status: "busy", sectorId: "S1",
-    ritualAr: "المبيت ورمي الجمرات", ritualEn: "Staying & Stoning Ritual",
-    descAr: "مخيم الحج — يُقيم فيه الحجاج ليالي التشريق في خيام ممتدة",
-    descEn: "The Hajj campsite — pilgrims stay here in tent cities during Tashreeq",
-  },
-  {
-    id: "jamarat",
-    nameAr: "جسر الجمرات", nameEn: "Jamarat Bridge",
-    lat: 21.4225, lng: 39.8734, radius: 350,
-    pilgrimCount: 18000, capacity: 20000, status: "warning", sectorId: "S4",
-    ritualAr: "رمي الجمرات", ritualEn: "Stoning of the Devil",
-    descAr: "موقع رمي الجمرات الثلاث — أحد أهم شعائر الحج",
-    descEn: "The site of stoning the three pillars — one of the most important Hajj rituals",
-  },
-  {
-    id: "muzdalifah",
-    nameAr: "مُزدلِفة", nameEn: "Muzdalifah",
-    lat: 21.3833, lng: 39.9286, radius: 2500,
-    pilgrimCount: 5000, capacity: 40000, status: "empty", sectorId: "S3",
-    ritualAr: "المبيت وجمع الحصى", ritualEn: "Overnight stay & pebble collection",
-    descAr: "المشعر الحرام — يبيت فيه الحجاج ليلة العيد ويجمعون الحصى للرمي",
-    descEn: "Sacred grounds where pilgrims spend the night of Eid and collect pebbles",
-  },
-  {
-    id: "arafat",
-    nameAr: "عَرَفات", nameEn: "Arafat",
-    lat: 21.3547, lng: 39.9845, radius: 4000,
-    pilgrimCount: 3000, capacity: 80000, status: "empty", sectorId: "S2",
-    ritualAr: "الوقوف بعرفة", ritualEn: "Standing at Arafat",
-    descAr: "ركن الحج الأعظم — يقف فيه الحجاج يوم عرفة دعاءً وتضرعاً",
-    descEn: "The pinnacle of Hajj — pilgrims stand here in prayer on the Day of Arafat",
-  },
+  { id: "haram", nameAr: "المسجد الحرام", nameEn: "Grand Mosque", lat: 21.4225, lng: 39.8262, radius: 600, pilgrimCount: 42000, capacity: 60000, status: "busy", sectorId: "S5", ritualAr: "الطواف والسعي", ritualEn: "Tawaf & Sa'i", descAr: "المسجد الأعظم في العالم — قلب الإسلام ومقصد الحجاج والمعتمرين", descEn: "The largest mosque in the world — the heart of Islam" },
+  { id: "mina", nameAr: "مِنىٰ", nameEn: "Mina", lat: 21.4133, lng: 39.8907, radius: 1800, pilgrimCount: 38000, capacity: 50000, status: "busy", sectorId: "S1", ritualAr: "المبيت ورمي الجمرات", ritualEn: "Staying & Stoning Ritual", descAr: "مخيم الحج — يُقيم فيه الحجاج ليالي التشريق في خيام ممتدة", descEn: "The Hajj campsite — pilgrims stay here in tent cities during Tashreeq" },
+  { id: "jamarat", nameAr: "جسر الجمرات", nameEn: "Jamarat Bridge", lat: 21.4225, lng: 39.8734, radius: 350, pilgrimCount: 18000, capacity: 20000, status: "warning", sectorId: "S4", ritualAr: "رمي الجمرات", ritualEn: "Stoning of the Devil", descAr: "موقع رمي الجمرات الثلاث — أحد أهم شعائر الحج", descEn: "The site of stoning the three pillars — one of the most important Hajj rituals" },
+  { id: "muzdalifah", nameAr: "مُزدلِفة", nameEn: "Muzdalifah", lat: 21.3833, lng: 39.9286, radius: 2500, pilgrimCount: 5000, capacity: 40000, status: "empty", sectorId: "S3", ritualAr: "المبيت وجمع الحصى", ritualEn: "Overnight stay & pebble collection", descAr: "المشعر الحرام — يبيت فيه الحجاج ليلة العيد ويجمعون الحصى للرمي", descEn: "Sacred grounds where pilgrims spend the night of Eid and collect pebbles" },
+  { id: "arafat", nameAr: "عَرَفات", nameEn: "Arafat", lat: 21.3547, lng: 39.9845, radius: 4000, pilgrimCount: 3000, capacity: 80000, status: "empty", sectorId: "S2", ritualAr: "الوقوف بعرفة", ritualEn: "Standing at Arafat", descAr: "ركن الحج الأعظم — يقف فيه الحجاج يوم عرفة دعاءً وتضرعاً", descEn: "The pinnacle of Hajj — pilgrims stand here in prayer on the Day of Arafat" },
 ];
+
+const SUPERVISOR_POS = { lat: 21.4195, lng: 39.8233 };
 
 function zoneColor(status: Zone["status"]) {
   switch (status) {
@@ -99,20 +51,98 @@ function makePilgrimIcon(emergency: boolean, expired: boolean, highlighted: bool
   const anim = (emergency || highlighted) ? "animation:pulse 1.2s infinite;" : "";
   return L.divIcon({
     className: "",
-    html: `<div style="
-      width:${size}px;height:${size}px;
-      background:${color};
-      border:${border};
-      border-radius:50%;
-      box-shadow:${shadow};
-      ${anim}
-    "></div>`,
+    html: `<div style="width:${size}px;height:${size}px;background:${color};border:${border};border-radius:50%;box-shadow:${shadow};${anim}"></div>`,
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
   });
 }
 
-// ── Helper map-context components ──────────────────────────────────────────
+function makeSupervisorIcon() {
+  return L.divIcon({
+    className: "",
+    html: `
+      <div style="
+        width:32px;height:32px;
+        display:flex;align-items:center;justify-content:center;
+        filter:drop-shadow(0 0 8px #2563EBCC);
+      ">
+        <div style="
+          width:22px;height:22px;
+          background:#2563EB;
+          border:3px solid #fff;
+          border-radius:5px;
+          transform:rotate(45deg);
+          box-shadow:0 2px 8px #2563EB99;
+        "></div>
+      </div>
+    `,
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+  });
+}
+
+interface NavStep { instruction: string; distanceM: number; type: string; modifier: string; }
+interface NavRoute {
+  coords: [number, number][];
+  distanceM: number;
+  durationS: number;
+  steps: NavStep[];
+  pilgrim: Pilgrim;
+}
+
+function formatManeuver(step: any, ar: boolean): string {
+  const type = step.maneuver?.type ?? "";
+  const mod = step.maneuver?.modifier ?? "";
+  const name = step.name ? (ar ? step.name : step.name) : "";
+  const on = name ? (ar ? ` في ${name}` : ` on ${name}`) : "";
+  if (type === "depart") return ar ? `انطلق${on}` : `Head${on}`;
+  if (type === "arrive") return ar ? "وصلت إلى الحاج" : "Arrived at pilgrim";
+  if (mod === "left") return ar ? `انعطف يساراً${on}` : `Turn left${on}`;
+  if (mod === "right") return ar ? `انعطف يميناً${on}` : `Turn right${on}`;
+  if (mod === "sharp left") return ar ? `انعطف حاداً يساراً${on}` : `Sharp left${on}`;
+  if (mod === "sharp right") return ar ? `انعطف حاداً يميناً${on}` : `Sharp right${on}`;
+  if (mod === "uturn") return ar ? "استدر للخلف" : "Make a U-turn";
+  if (mod === "straight") return ar ? `استمر مستقيماً${on}` : `Continue straight${on}`;
+  return ar ? `استمر${on}` : `Continue${on}`;
+}
+
+async function fetchOSRMRoute(ar: boolean, fromLat: number, fromLng: number, toLat: number, toLng: number, pilgrim: Pilgrim): Promise<NavRoute | null> {
+  try {
+    const url = `https://router.project-osrm.org/route/v1/foot/${fromLng},${fromLat};${toLng},${toLat}?overview=full&geometries=geojson&steps=true`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.code !== "Ok" || !data.routes?.length) return null;
+    const route = data.routes[0];
+    const coords: [number, number][] = route.geometry.coordinates.map(([lng, lat]: [number, number]) => [lat, lng]);
+    const steps: NavStep[] = route.legs[0].steps.map((s: any) => ({
+      instruction: formatManeuver(s, ar),
+      distanceM: Math.round(s.distance),
+      type: s.maneuver?.type ?? "",
+      modifier: s.maneuver?.modifier ?? "",
+    }));
+    return { coords, distanceM: Math.round(route.distance), durationS: Math.round(route.duration), steps, pilgrim };
+  } catch {
+    return null;
+  }
+}
+
+function formatDist(m: number, ar: boolean): string {
+  if (m >= 1000) return `${(m / 1000).toFixed(1)} ${ar ? "كم" : "km"}`;
+  return `${m} ${ar ? "م" : "m"}`;
+}
+function formatDuration(s: number, ar: boolean): string {
+  const mins = Math.max(1, Math.round(s / 60));
+  return ar ? `${mins} دقيقة` : `${mins} min`;
+}
+
+function stepIcon(type: string, modifier: string) {
+  if (type === "arrive") return <MapPin className="w-3.5 h-3.5 text-primary flex-shrink-0" />;
+  if (type === "depart") return <Footprints className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />;
+  if (modifier === "left" || modifier === "sharp left") return <ArrowLeft className="w-3.5 h-3.5 text-foreground/70 flex-shrink-0" />;
+  if (modifier === "right" || modifier === "sharp right") return <ArrowRight className="w-3.5 h-3.5 text-foreground/70 flex-shrink-0" />;
+  if (modifier === "uturn") return <CornerDownLeft className="w-3.5 h-3.5 text-foreground/70 flex-shrink-0" />;
+  return <ArrowUp className="w-3.5 h-3.5 text-foreground/70 flex-shrink-0" />;
+}
 
 function ZoomControls() {
   const map = useMap();
@@ -135,22 +165,28 @@ function FitBounds() {
 
 function FlyToHighlighted({ lat, lng }: { lat: number; lng: number }) {
   const map = useMap();
-  useEffect(() => {
-    map.flyTo([lat, lng], 17, { duration: 1.4 });
-  }, [lat, lng, map]);
+  useEffect(() => { map.flyTo([lat, lng], 17, { duration: 1.4 }); }, [lat, lng, map]);
   return null;
 }
 
-// ── Pilgrim marker component (manages its own popup auto-open) ─────────────
+function FitRouteBounds({ coords }: { coords: [number, number][] }) {
+  const map = useMap();
+  useEffect(() => {
+    if (coords.length < 2) return;
+    map.fitBounds(L.latLngBounds(coords), { padding: [70, 70] });
+  }, [coords, map]);
+  return null;
+}
 
 interface PilgrimMarkerProps {
   pilgrim: Pilgrim;
   isHighlighted: boolean;
   ar: boolean;
   isRTL: boolean;
+  onNavigate: (pilgrim: Pilgrim) => void;
 }
 
-function PilgrimMarker({ pilgrim, isHighlighted, ar, isRTL }: PilgrimMarkerProps) {
+function PilgrimMarker({ pilgrim, isHighlighted, ar, isRTL, onNavigate }: PilgrimMarkerProps) {
   const markerRef = useRef<L.Marker | null>(null);
   const expired = pilgrim.permitStatus === "Expired";
   const icon = makePilgrimIcon(!!pilgrim.emergencyStatus, expired, isHighlighted);
@@ -163,30 +199,18 @@ function PilgrimMarker({ pilgrim, isHighlighted, ar, isRTL }: PilgrimMarkerProps
   }, [isHighlighted]);
 
   return (
-    <Marker
-      ref={markerRef}
-      position={[pilgrim.locationLat!, pilgrim.locationLng!]}
-      icon={icon}
-    >
+    <Marker ref={markerRef} position={[pilgrim.locationLat!, pilgrim.locationLng!]} icon={icon}>
       <Popup>
         <div style={{ fontFamily: "sans-serif", minWidth: 190, direction: isRTL ? "rtl" : "ltr" }}>
-          <div style={{ fontWeight: 800, fontSize: 14, marginBottom: 4, color: "#0E4D41" }}>
-            {pilgrim.name}
-          </div>
-          <div style={{ fontSize: 12, color: "#888", marginBottom: 4 }}>
-            {pilgrim.nationality}
-          </div>
+          <div style={{ fontWeight: 800, fontSize: 14, marginBottom: 4, color: "#0E4D41" }}>{pilgrim.name}</div>
+          <div style={{ fontSize: 12, color: "#888", marginBottom: 4 }}>{pilgrim.nationality}</div>
           <div style={{ fontSize: 12, marginBottom: 3 }}>
             {ar ? "المجموعة:" : "Group:"}{" "}
             <span style={{ color: "#444" }}>{pilgrim.campaignGroup ?? "—"}</span>
           </div>
           <div style={{ fontSize: 12, marginBottom: 8 }}>
             {ar ? "التصريح:" : "Permit:"}{" "}
-            <b style={{
-              color: pilgrim.permitStatus === "Valid" ? "#10B981"
-                : pilgrim.permitStatus === "Expired" ? "#F59E0B"
-                : pilgrim.permitStatus === "Pending" ? "#8B5CF6" : "#EF4444"
-            }}>
+            <b style={{ color: pilgrim.permitStatus === "Valid" ? "#10B981" : pilgrim.permitStatus === "Expired" ? "#F59E0B" : pilgrim.permitStatus === "Pending" ? "#8B5CF6" : "#EF4444" }}>
               {pilgrim.permitStatus}
             </b>
           </div>
@@ -195,6 +219,18 @@ function PilgrimMarker({ pilgrim, isHighlighted, ar, isRTL }: PilgrimMarkerProps
               ⚠ {ar ? "طوارئ نشطة" : "Emergency Active"}
             </div>
           )}
+          <button
+            onClick={() => onNavigate(pilgrim)}
+            style={{
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+              width: "100%", padding: "7px 12px", marginBottom: 6,
+              background: "#2563EB", color: "#fff", borderRadius: 8,
+              fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer",
+            }}
+          >
+            <span style={{ fontSize: 14 }}>🧭</span>
+            {ar ? "انقلني إليه" : "Navigate to pilgrim"}
+          </button>
           <a
             href={`/pilgrims?pilgrimId=${pilgrim.id}`}
             style={{
@@ -211,8 +247,6 @@ function PilgrimMarker({ pilgrim, isHighlighted, ar, isRTL }: PilgrimMarkerProps
   );
 }
 
-// ── Main RealMap component ─────────────────────────────────────────────────
-
 interface RealMapProps {
   pilgrims?: Pilgrim[];
   sectorData: { id: string; load: number; status: string }[];
@@ -225,6 +259,8 @@ export function RealMap({ pilgrims, sectorData, onZoneClick, highlightedPilgrimI
   const ar = lang === "ar";
   const { toast } = useToast();
   const [selectedZone, setSelectedZone] = useState<Zone | null>(null);
+  const [navRoute, setNavRoute] = useState<NavRoute | null>(null);
+  const [loadingNav, setLoadingNav] = useState(false);
 
   const highlightedPilgrim = highlightedPilgrimId
     ? pilgrims?.find(p => p.id === highlightedPilgrimId)
@@ -234,8 +270,7 @@ export function RealMap({ pilgrims, sectorData, onZoneClick, highlightedPilgrimI
     const sector = sectorData.find(s => s.id === z.sectorId);
     if (!sector) return z;
     const load = sector.load;
-    const status: Zone["status"] =
-      load >= 80 ? "warning" : load >= 50 ? "busy" : load >= 5 ? "normal" : "empty";
+    const status: Zone["status"] = load >= 80 ? "warning" : load >= 50 ? "busy" : load >= 5 ? "normal" : "empty";
     return { ...z, pilgrimCount: Math.round((load / 100) * z.capacity), status };
   });
 
@@ -243,6 +278,21 @@ export function RealMap({ pilgrims, sectorData, onZoneClick, highlightedPilgrimI
     setSelectedZone(zone);
     onZoneClick?.(zone);
   }, [onZoneClick]);
+
+  const handleNavigate = useCallback(async (pilgrim: Pilgrim) => {
+    if (!pilgrim.locationLat || !pilgrim.locationLng) return;
+    setLoadingNav(true);
+    setNavRoute(null);
+    const route = await fetchOSRMRoute(ar, SUPERVISOR_POS.lat, SUPERVISOR_POS.lng, pilgrim.locationLat, pilgrim.locationLng, pilgrim);
+    setLoadingNav(false);
+    if (!route) {
+      toast({ title: ar ? "تعذّر حساب المسار" : "Route unavailable", description: ar ? "لم نتمكن من الاتصال بخدمة التوجيه." : "Could not connect to routing service.", variant: "destructive" });
+      return;
+    }
+    route.pilgrim = pilgrim;
+    setNavRoute(route);
+    setSelectedZone(null);
+  }, [ar, toast]);
 
   return (
     <div className="relative w-full h-full" style={{ minHeight: 300, isolation: "isolate" }}>
@@ -267,13 +317,11 @@ export function RealMap({ pilgrims, sectorData, onZoneClick, highlightedPilgrimI
         <ZoomControls />
         <FitBounds />
 
-        {/* Fly to highlighted pilgrim */}
-        {highlightedPilgrim?.locationLat && highlightedPilgrim?.locationLng && (
-          <FlyToHighlighted
-            lat={highlightedPilgrim.locationLat}
-            lng={highlightedPilgrim.locationLng}
-          />
+        {highlightedPilgrim?.locationLat && highlightedPilgrim?.locationLng && !navRoute && (
+          <FlyToHighlighted lat={highlightedPilgrim.locationLat} lng={highlightedPilgrim.locationLng} />
         )}
+
+        {navRoute && <FitRouteBounds coords={navRoute.coords} />}
 
         {/* Zone circles */}
         {enrichedZones.map(zone => {
@@ -283,23 +331,42 @@ export function RealMap({ pilgrims, sectorData, onZoneClick, highlightedPilgrimI
               key={zone.id}
               center={[zone.lat, zone.lng]}
               radius={zone.radius}
-              pathOptions={{
-                color: stroke,
-                fillColor: fill,
-                fillOpacity: 1,
-                weight: zone.status === "warning" ? 2.5 : 1.5,
-                dashArray: zone.status === "warning" ? "6 4" : undefined,
-              }}
+              pathOptions={{ color: stroke, fillColor: fill, fillOpacity: 1, weight: zone.status === "warning" ? 2.5 : 1.5, dashArray: zone.status === "warning" ? "6 4" : undefined }}
               eventHandlers={{ click: () => handleZoneClick(zone) }}
             >
               <Tooltip direction="top" offset={[0, -6]} opacity={0.95}>
-                <span style={{ fontWeight: 700, fontSize: 12 }}>
-                  {ar ? zone.nameAr : zone.nameEn}
-                </span>
+                <span style={{ fontWeight: 700, fontSize: 12 }}>{ar ? zone.nameAr : zone.nameEn}</span>
               </Tooltip>
             </Circle>
           );
         })}
+
+        {/* Supervisor marker */}
+        <Marker position={[SUPERVISOR_POS.lat, SUPERVISOR_POS.lng]} icon={makeSupervisorIcon()}>
+          <Popup>
+            <div style={{ fontFamily: "sans-serif", minWidth: 160, direction: isRTL ? "rtl" : "ltr" }}>
+              <div style={{ fontWeight: 800, fontSize: 13, color: "#2563EB", marginBottom: 4 }}>
+                🛡 {ar ? "موقع المشرف" : "Supervisor Location"}
+              </div>
+              <div style={{ fontSize: 11, color: "#888" }}>
+                {ar ? "الموقع الافتراضي — قرب المسجد الحرام" : "Default position — near Grand Mosque"}
+              </div>
+            </div>
+          </Popup>
+          <Tooltip direction="top" offset={[0, -10]} opacity={0.95} permanent>
+            <span style={{ fontWeight: 700, fontSize: 11, color: "#2563EB" }}>
+              {ar ? "المشرف" : "Supervisor"}
+            </span>
+          </Tooltip>
+        </Marker>
+
+        {/* Route polyline */}
+        {navRoute && (
+          <Polyline
+            positions={navRoute.coords}
+            pathOptions={{ color: "#2563EB", weight: 5, opacity: 0.85, dashArray: "10 6", lineCap: "round", lineJoin: "round" }}
+          />
+        )}
 
         {/* Pilgrim markers */}
         {pilgrims?.map(pilgrim => {
@@ -311,12 +378,13 @@ export function RealMap({ pilgrims, sectorData, onZoneClick, highlightedPilgrimI
               isHighlighted={pilgrim.id === highlightedPilgrimId}
               ar={ar}
               isRTL={isRTL}
+              onNavigate={handleNavigate}
             />
           );
         })}
       </MapContainer>
 
-      {/* Zone info popup — smart side: west zones (lng<39.89) open on right, east on left */}
+      {/* Zone info popup */}
       <AnimatePresence>
         {selectedZone && (
           <motion.div
@@ -337,32 +405,23 @@ export function RealMap({ pilgrims, sectorData, onZoneClick, highlightedPilgrimI
                 <X className="w-4 h-4" />
               </button>
             </div>
-
             <p className={`text-xs text-muted-foreground mb-4 leading-relaxed ${isRTL ? "text-right" : ""}`}>
               {ar ? selectedZone.descAr : selectedZone.descEn}
             </p>
-
             <div className="mb-3">
               <div className={`flex justify-between text-xs font-semibold mb-1.5 ${isRTL ? "flex-row-reverse" : ""}`}>
                 <span className="text-muted-foreground">{ar ? "الكثافة" : "Density"}</span>
-                <span className={
-                  selectedZone.status === "warning" ? "text-destructive" :
-                  selectedZone.status === "busy" ? "text-accent" : "text-primary"
-                }>
+                <span className={selectedZone.status === "warning" ? "text-destructive" : selectedZone.status === "busy" ? "text-accent" : "text-primary"}>
                   {Math.round((selectedZone.pilgrimCount / selectedZone.capacity) * 100)}%
                 </span>
               </div>
               <div className="h-2 bg-secondary rounded-full overflow-hidden">
                 <div
-                  className={`h-full rounded-full transition-all ${
-                    selectedZone.status === "warning" ? "bg-destructive" :
-                    selectedZone.status === "busy" ? "bg-accent" : "bg-primary"
-                  }`}
+                  className={`h-full rounded-full transition-all ${selectedZone.status === "warning" ? "bg-destructive" : selectedZone.status === "busy" ? "bg-accent" : "bg-primary"}`}
                   style={{ width: `${Math.round((selectedZone.pilgrimCount / selectedZone.capacity) * 100)}%` }}
                 />
               </div>
             </div>
-
             <div className={`grid grid-cols-2 gap-2 text-sm mb-4 ${isRTL ? "text-right" : ""}`}>
               <div className="bg-secondary/50 rounded-xl p-3">
                 <div className="text-xs text-muted-foreground mb-1">{ar ? "الحجاج" : "Pilgrims"}</div>
@@ -373,24 +432,17 @@ export function RealMap({ pilgrims, sectorData, onZoneClick, highlightedPilgrimI
                 <div className="font-bold">{selectedZone.capacity.toLocaleString()}</div>
               </div>
             </div>
-
             {selectedZone.status === "warning" && (
               <div className={`flex items-center gap-2 bg-destructive/10 border border-destructive/30 text-destructive text-xs font-bold rounded-xl p-3 mb-4 ${isRTL ? "flex-row-reverse" : ""}`}>
                 <AlertTriangle className="w-4 h-4 flex-shrink-0" />
                 {ar ? "تحذير: اكتظاظ شديد" : "Warning: High congestion"}
               </div>
             )}
-
             <div className={`flex gap-2 ${isRTL ? "flex-row-reverse" : ""}`}>
               <button
                 className={`flex-1 py-2.5 bg-primary text-primary-foreground text-sm font-bold rounded-xl hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 ${isRTL ? "flex-row-reverse" : ""}`}
                 onClick={() => {
-                  toast({
-                    title: ar ? "جارٍ تحويل المسار" : "Rerouting in Progress",
-                    description: ar
-                      ? `تم إرسال تعليمات تحويل الحشود بعيداً عن ${selectedZone?.nameAr}. المسارات البديلة نشطة.`
-                      : `Crowd diversion instructions sent away from ${selectedZone?.nameEn}. Alternate routes are active.`,
-                  });
+                  toast({ title: ar ? "جارٍ تحويل المسار" : "Rerouting in Progress", description: ar ? `تم إرسال تعليمات تحويل الحشود بعيداً عن ${selectedZone?.nameAr}.` : `Crowd diversion instructions sent away from ${selectedZone?.nameEn}.` });
                   setSelectedZone(null);
                 }}
               >
@@ -405,9 +457,90 @@ export function RealMap({ pilgrims, sectorData, onZoneClick, highlightedPilgrimI
         )}
       </AnimatePresence>
 
+      {/* Navigation panel */}
+      <AnimatePresence>
+        {navRoute && (
+          <motion.div
+            key="nav-panel"
+            initial={{ opacity: 0, y: 60 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 60 }}
+            transition={{ type: "spring", damping: 22, stiffness: 260 }}
+            className="absolute bottom-0 left-0 right-0 bg-card/97 backdrop-blur-xl border-t border-border shadow-2xl"
+            style={{ zIndex: 860, maxHeight: "42%" }}
+            dir={isRTL ? "rtl" : "ltr"}
+          >
+            {/* Header */}
+            <div className={`flex items-center gap-3 px-4 pt-3 pb-2 border-b border-border ${isRTL ? "flex-row-reverse" : ""}`}>
+              <div className="w-9 h-9 rounded-xl bg-blue-500/15 flex items-center justify-center flex-shrink-0">
+                <Navigation className="w-4 h-4 text-blue-500" />
+              </div>
+              <div className={`flex-1 min-w-0 ${isRTL ? "text-right" : ""}`}>
+                <div className="font-bold text-sm text-foreground truncate">
+                  {ar ? `التوجه إلى: ${navRoute.pilgrim.name}` : `Navigate to: ${navRoute.pilgrim.name}`}
+                </div>
+                <div className={`flex items-center gap-3 text-xs text-muted-foreground mt-0.5 ${isRTL ? "flex-row-reverse" : ""}`}>
+                  <span className={`flex items-center gap-1 ${isRTL ? "flex-row-reverse" : ""}`}>
+                    <MapPin className="w-3 h-3" />
+                    {formatDist(navRoute.distanceM, ar)}
+                  </span>
+                  <span className={`flex items-center gap-1 ${isRTL ? "flex-row-reverse" : ""}`}>
+                    <Clock className="w-3 h-3" />
+                    {formatDuration(navRoute.durationS, ar)}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setNavRoute(null)}
+                className="p-1.5 rounded-lg hover:bg-destructive/10 hover:text-destructive transition-colors flex-shrink-0 text-muted-foreground"
+                title={ar ? "إنهاء التنقل" : "End navigation"}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Steps */}
+            <div className="overflow-y-auto px-3 py-2" style={{ maxHeight: 180 }}>
+              {navRoute.steps.filter(s => s.distanceM > 0 || s.type === "arrive").map((step, i) => (
+                <div
+                  key={i}
+                  className={`flex items-center gap-3 py-2 border-b border-border/40 last:border-0 ${isRTL ? "flex-row-reverse" : ""}`}
+                >
+                  <div className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
+                    {stepIcon(step.type, step.modifier)}
+                  </div>
+                  <span className={`flex-1 text-xs text-foreground ${isRTL ? "text-right" : ""}`}>{step.instruction}</span>
+                  {step.distanceM > 0 && (
+                    <span className="text-xs text-muted-foreground font-mono flex-shrink-0">{formatDist(step.distanceM, ar)}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Loading nav spinner */}
+      <AnimatePresence>
+        {loadingNav && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-sm"
+            style={{ zIndex: 870 }}
+          >
+            <div className="bg-card rounded-2xl shadow-2xl px-6 py-5 flex items-center gap-3 border border-border" dir={isRTL ? "rtl" : "ltr"}>
+              <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin flex-shrink-0" />
+              <span className="font-semibold text-sm">{ar ? "جارٍ حساب المسار…" : "Calculating route…"}</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Highlighted pilgrim banner */}
       <AnimatePresence>
-        {highlightedPilgrim && (
+        {highlightedPilgrim && !navRoute && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -422,7 +555,7 @@ export function RealMap({ pilgrims, sectorData, onZoneClick, highlightedPilgrimI
         )}
       </AnimatePresence>
 
-      {/* Legend — always on the LEFT side (opposite the zone popup) */}
+      {/* Legend */}
       <div className={`absolute top-4 ${isRTL ? "left-4" : "right-4"} bg-card/92 backdrop-blur-xl border border-border rounded-xl p-3 shadow-xl`} style={{ zIndex: 850 }} dir={isRTL ? "rtl" : "ltr"}>
         <div className="text-xs font-bold text-muted-foreground mb-2 uppercase tracking-wider">{ar ? "مستوى الازدحام" : "Density"}</div>
         {[
@@ -445,9 +578,13 @@ export function RealMap({ pilgrims, sectorData, onZoneClick, highlightedPilgrimI
             <span className="w-3 h-3 rounded-full bg-amber-400 flex-shrink-0" />
             <span className="text-foreground/80">{ar ? "تصريح منتهي" : "Expired Permit"}</span>
           </div>
-          <div className={`flex items-center gap-2 text-xs ${isRTL ? "flex-row-reverse" : ""}`}>
+          <div className={`flex items-center gap-2 text-xs mb-1.5 ${isRTL ? "flex-row-reverse" : ""}`}>
             <span className="w-3 h-3 rounded-full bg-red-500 flex-shrink-0" />
             <span className="text-foreground/80">{ar ? "حالة طوارئ" : "Emergency"}</span>
+          </div>
+          <div className={`flex items-center gap-2 text-xs ${isRTL ? "flex-row-reverse" : ""}`}>
+            <span className="w-3 h-3 rounded bg-blue-500 flex-shrink-0" style={{ transform: "rotate(45deg)", borderRadius: 2 }} />
+            <span className="text-foreground/80">{ar ? "المشرف" : "Supervisor"}</span>
           </div>
         </div>
       </div>
