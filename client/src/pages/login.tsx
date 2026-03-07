@@ -344,9 +344,14 @@ export function LoginPage() {
                   {loading ? (ar ? "جاري الدخول..." : "Entering...") : (ar ? "دخول بوابة الحاج" : "Enter Pilgrim Portal")}
                 </button>
 
-                <p className="text-white/30 text-[10px] text-center mt-2">
-                  {ar ? "يُقبل أي رقم جواز ورقم سري للدخول" : "Any passport number and PIN will be accepted"}
-                </p>
+                {/* Demo hint */}
+                <div className="mt-2 p-3 rounded-xl bg-white/5 border border-white/10 space-y-1.5">
+                  <p className="text-white/40 text-[10px] font-semibold uppercase tracking-wider text-center">{ar ? "بيانات تجريبية" : "Demo Credentials"}</p>
+                  <div className="flex flex-col gap-1 text-center">
+                    <code className="text-[#d4a853] text-xs">A18876529 / 2244</code>
+                    <code className="text-[#d4a853] text-xs">A28354401 / 1998</code>
+                  </div>
+                </div>
               </motion.form>
             )}
           </AnimatePresence>
