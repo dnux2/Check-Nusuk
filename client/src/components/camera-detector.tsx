@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { Camera, CameraOff, Loader2, AlertCircle, Users, ShieldCheck, ShieldX } from "lucide-react";
+import { Camera, CameraOff, Loader2, AlertCircle, ShieldCheck, ShieldX } from "lucide-react";
 import { useLanguage } from "@/contexts/language-context";
-import campPhoto from "@assets/image_1772833520488.png";
 
 interface Detection {
   bbox: [number, number, number, number];
@@ -198,22 +197,37 @@ export function CameraDetector() {
       {/* Main camera viewport */}
       <div className="relative aspect-video rounded-2xl overflow-hidden border border-border/50 shadow-2xl">
 
-        {/* Camp photo — visible when idle or as background texture */}
-        <img
-          src={campPhoto}
-          alt="Mina Camp"
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${status === "active" ? "opacity-0" : "opacity-100"}`}
-        />
-
-        {/* Camp photo overlay when idle */}
-        {status !== "active" && <div className="absolute inset-0 bg-black/50" />}
-
-        {/* Scanline texture on camp photo */}
+        {/* Dark camera-feed background — shown when camera is not active */}
         {status !== "active" && (
-          <div
-            className="absolute inset-0 opacity-10 pointer-events-none"
-            style={{ backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,255,100,0.4) 3px, rgba(0,255,100,0.4) 4px)" }}
-          />
+          <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 60% 40%, #0f2d22 0%, #081a12 60%, #040e09 100%)" }}>
+            {/* Surveillance grid lines */}
+            <div
+              className="absolute inset-0 opacity-[0.07]"
+              style={{
+                backgroundImage:
+                  "linear-gradient(rgba(34,197,94,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(34,197,94,0.6) 1px, transparent 1px)",
+                backgroundSize: "80px 50px",
+              }}
+            />
+            {/* Corner bracket accents */}
+            <div className="absolute top-5 left-5 w-8 h-8 border-t-2 border-l-2 border-emerald-500/40 rounded-tl" />
+            <div className="absolute top-5 right-5 w-8 h-8 border-t-2 border-r-2 border-emerald-500/40 rounded-tr" />
+            <div className="absolute bottom-5 left-5 w-8 h-8 border-b-2 border-l-2 border-emerald-500/40 rounded-bl" />
+            <div className="absolute bottom-5 right-5 w-8 h-8 border-b-2 border-r-2 border-emerald-500/40 rounded-br" />
+            {/* Center crosshair */}
+            <div className="absolute inset-0 flex items-center justify-center opacity-10">
+              <div className="relative w-16 h-16">
+                <div className="absolute top-1/2 left-0 right-0 h-px bg-emerald-400" />
+                <div className="absolute left-1/2 top-0 bottom-0 w-px bg-emerald-400" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 rounded-full border border-emerald-400" />
+              </div>
+            </div>
+            {/* Scanline effect */}
+            <div
+              className="absolute inset-0 pointer-events-none opacity-[0.04]"
+              style={{ backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,100,1) 2px, rgba(0,255,100,1) 3px)" }}
+            />
+          </div>
         )}
 
         {/* Live camera feed */}

@@ -193,7 +193,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <div className="h-8 w-px bg-border mx-1" />
 
             <div className={`flex items-center gap-3 ${isRTL ? "flex-row-reverse" : ""}`}>
-              <div className={`hidden sm:block ${isRTL ? "text-left" : "text-right"}`}>
+              <div className={`hidden sm:block ${isRTL ? "text-right" : "text-right"}`}>
                 <p className="text-sm font-bold text-foreground">{t("adminSupervisor")}</p>
                 <p className="text-xs text-muted-foreground">{t("sector")}</p>
               </div>
