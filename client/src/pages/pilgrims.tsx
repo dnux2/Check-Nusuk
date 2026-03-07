@@ -1,12 +1,12 @@
 import { usePilgrims, useCreatePilgrim } from "@/hooks/use-pilgrims";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, Plus, MapPin, Eye, ShieldAlert, Navigation } from "lucide-react";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
 import { useLanguage } from "@/contexts/language-context";
 import { PilgrimPopup } from "@/components/pilgrim-popup";
 import { type Pilgrim } from "@shared/schema";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 
 export function PilgrimsPage() {
   const { data: pilgrims, isLoading } = usePilgrims();
@@ -16,9 +16,20 @@ export function PilgrimsPage() {
   const { t, isRTL, lang } = useLanguage();
   const ar = lang === "ar";
   const [, navigate] = useLocation();
+  const searchStr = useSearch();
 
   const [isModalOpen, setModalOpen] = useState(false);
   const [selectedPilgrim, setSelectedPilgrim] = useState<Pilgrim | null>(null);
+
+  // Auto-open pilgrim details when navigated from map with ?pilgrimId=X
+  useEffect(() => {
+    if (!pilgrims || !searchStr) return;
+    const params = new URLSearchParams(searchStr);
+    const idParam = params.get("pilgrimId");
+    if (!idParam) return;
+    const found = pilgrims.find(p => p.id === Number(idParam));
+    if (found) setSelectedPilgrim(found);
+  }, [pilgrims, searchStr]);
 
   const filtered = pilgrims?.filter((p) => {
     const q = search.toLowerCase();

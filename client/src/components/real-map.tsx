@@ -195,7 +195,7 @@ function PilgrimMarker({ pilgrim, isHighlighted, ar, isRTL }: PilgrimMarkerProps
             </div>
           )}
           <a
-            href="/pilgrims"
+            href={`/pilgrims?pilgrimId=${pilgrim.id}`}
             style={{
               display: "block", textAlign: "center", padding: "6px 12px",
               background: "#0E4D41", color: "#fff", borderRadius: 8,
