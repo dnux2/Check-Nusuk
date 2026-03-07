@@ -12,7 +12,7 @@ function parseWithLogging<T>(schema: z.ZodSchema<T>, data: unknown, label: strin
   return result.data;
 }
 
-export function usePilgrims() {
+export function usePilgrims(options?: { refetchInterval?: number }) {
   return useQuery({
     queryKey: [api.pilgrims.list.path],
     queryFn: async () => {
@@ -21,6 +21,7 @@ export function usePilgrims() {
       const data = await res.json();
       return parseWithLogging(api.pilgrims.list.responses[200], data, "pilgrims.list");
     },
+    refetchInterval: options?.refetchInterval,
   });
 }
 

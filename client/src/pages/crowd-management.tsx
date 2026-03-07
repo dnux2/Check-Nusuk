@@ -66,7 +66,7 @@ interface CrowdAssessment {
 }
 
 export function CrowdManagementPage() {
-  const { data: pilgrims } = usePilgrims();
+  const { data: pilgrims } = usePilgrims({ refetchInterval: 5000 });
   const { t, isRTL, lang } = useLanguage();
   const ar = lang === "ar";
   const search = useSearch();

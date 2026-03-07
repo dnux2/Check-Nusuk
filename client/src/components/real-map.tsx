@@ -128,17 +128,22 @@ function zoneColor(status: Zone["status"]) {
   }
 }
 
-function makePilgrimIcon(emergency: boolean, expired: boolean, highlighted: boolean) {
+function makePilgrimIcon(emergency: boolean, expired: boolean, highlighted: boolean, live: boolean) {
   const color = emergency ? "#EF4444" : expired ? "#F59E0B" : "#10B981";
   const size = highlighted ? 22 : 14;
   const border = highlighted ? "3px solid #fff" : "2px solid #fff";
   const shadow = highlighted ? `0 0 14px 4px ${color}CC` : `0 0 6px ${color}99`;
   const anim = (emergency || highlighted) ? "animation:pulse 1.2s infinite;" : "";
+  const outerSize = size + (live ? 20 : 0);
+  const liveRing = live
+    ? `<div style="position:absolute;inset:-8px;border:2.5px solid #10B981;border-radius:50%;animation:pulse 1s infinite;opacity:0.7;"></div>
+       <div style="position:absolute;top:-18px;left:50%;transform:translateX(-50%);background:#10B981;color:#fff;font-size:9px;font-weight:900;padding:1px 5px;border-radius:4px;white-space:nowrap;letter-spacing:0.5px;">LIVE</div>`
+    : "";
   return L.divIcon({
     className: "",
-    html: `<div style="width:${size}px;height:${size}px;background:${color};border:${border};border-radius:50%;box-shadow:${shadow};${anim}"></div>`,
-    iconSize: [size, size],
-    iconAnchor: [size / 2, size / 2],
+    html: `<div style="position:relative;width:${outerSize}px;height:${outerSize}px;display:flex;align-items:center;justify-content:center;">${liveRing}<div style="width:${size}px;height:${size}px;background:${color};border:${border};border-radius:50%;box-shadow:${shadow};${anim}"></div></div>`,
+    iconSize: [outerSize, outerSize],
+    iconAnchor: [outerSize / 2, outerSize / 2],
   });
 }
 
@@ -347,7 +352,10 @@ interface PilgrimMarkerProps {
 function PilgrimMarker({ pilgrim, isHighlighted, ar, isRTL, onNavigate }: PilgrimMarkerProps) {
   const markerRef = useRef<L.Marker | null>(null);
   const expired = pilgrim.permitStatus === "Expired";
-  const icon = makePilgrimIcon(!!pilgrim.emergencyStatus, expired, isHighlighted);
+  const isLive = pilgrim.lastUpdated
+    ? (Date.now() - new Date(pilgrim.lastUpdated).getTime()) < 30_000
+    : false;
+  const icon = makePilgrimIcon(!!pilgrim.emergencyStatus, expired, isHighlighted, isLive);
 
   useEffect(() => {
     if (isHighlighted && markerRef.current) {

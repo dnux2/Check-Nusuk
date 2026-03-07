@@ -1,13 +1,14 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { AlertTriangle, Map, MessageSquare, Languages, BookOpen, Star, Droplets, Clock, CheckCircle2, ChevronRight, Stethoscope, UserSearch, Shield, X } from "lucide-react";
+import { AlertTriangle, Map, MessageSquare, Languages, BookOpen, Star, Droplets, Clock, CheckCircle2, ChevronRight, Stethoscope, UserSearch, Shield, X, MapPin, Radio } from "lucide-react";
 import { useLanguage } from "@/contexts/language-context";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { type Pilgrim } from "@shared/schema";
 import { PilgrimLayout } from "@/components/pilgrim-layout";
+import { useUpdatePilgrimLocation } from "@/hooks/use-pilgrims";
 
 const PRAYER_TIMES = [
   { ar: "الفجر",  en: "Fajr",    time: "05:12" },
@@ -49,6 +50,42 @@ export function PilgrimHomePage() {
   const [selectedType, setSelectedType] = useState<EmergencyType | null>(null);
 
   const { data: pilgrim } = useQuery<Pilgrim>({ queryKey: ["/api/pilgrims/1"] });
+
+  const [isSharing, setIsSharing] = useState(false);
+  const [lastAccuracy, setLastAccuracy] = useState<number | null>(null);
+  const watchIdRef = useRef<number | null>(null);
+  const updateLocation = useUpdatePilgrimLocation();
+
+  const startSharing = () => {
+    if (!navigator.geolocation) {
+      toast({ title: ar ? "خطأ" : "Error", description: ar ? "الجهاز لا يدعم GPS" : "Device doesn't support GPS", variant: "destructive" });
+      return;
+    }
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      (pos) => {
+        setLastAccuracy(Math.round(pos.coords.accuracy));
+        updateLocation.mutate({ id: 1, locationLat: pos.coords.latitude, locationLng: pos.coords.longitude });
+      },
+      (err) => {
+        toast({ title: ar ? "خطأ في GPS" : "GPS Error", description: ar ? "تعذّر الوصول إلى موقعك" : "Could not access your location", variant: "destructive" });
+        setIsSharing(false);
+        watchIdRef.current = null;
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+    setIsSharing(true);
+  };
+
+  const stopSharing = () => {
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
+    setIsSharing(false);
+    setLastAccuracy(null);
+  };
+
+  useEffect(() => { return () => { if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current); }; }, []);
 
   const createEmergency = useMutation({
     mutationFn: (type: EmergencyType) =>
@@ -154,6 +191,46 @@ export function PilgrimHomePage() {
               ? (ar ? "جارٍ الإرسال…" : "Sending…")
               : (ar ? "زر الطوارئ SOS" : "SOS Emergency")}
           </button>
+        </motion.div>
+
+        {/* Live location sharing */}
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
+          {!isSharing ? (
+            <button
+              data-testid="btn-share-live-location"
+              onClick={startSharing}
+              className="w-full py-3.5 rounded-3xl font-bold text-sm flex items-center justify-center gap-2.5 border-2 border-[#10B981] text-[#10B981] bg-emerald-50 dark:bg-emerald-950/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-all active:scale-[0.98]"
+              dir={isRTL ? "rtl" : "ltr"}
+            >
+              <MapPin className="w-4 h-4 flex-shrink-0" />
+              {ar ? "مشاركة موقعي الحي مع المشرف" : "Share My Live Location with Supervisor"}
+            </button>
+          ) : (
+            <div className="rounded-3xl border-2 border-[#10B981] bg-emerald-50 dark:bg-emerald-950/20 overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-3.5" dir={isRTL ? "rtl" : "ltr"}>
+                <div className={`flex items-center gap-2.5 ${isRTL ? "flex-row-reverse" : ""}`}>
+                  <span className="relative flex h-3 w-3 flex-shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#10B981] opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-[#10B981]"></span>
+                  </span>
+                  <div className={isRTL ? "text-right" : ""}>
+                    <p className="text-xs font-bold text-[#10B981]">{ar ? "يُرسَل موقعك الآن" : "Location is being shared"}</p>
+                    {lastAccuracy !== null && (
+                      <p className="text-[10px] text-[#10B981]/70">{ar ? `دقة الإشارة: ${lastAccuracy}م` : `Accuracy: ${lastAccuracy}m`}</p>
+                    )}
+                  </div>
+                </div>
+                <button
+                  data-testid="btn-stop-live-location"
+                  onClick={stopSharing}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#10B981]/15 text-[#10B981] text-xs font-bold hover:bg-[#10B981]/25 transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                  {ar ? "إيقاف" : "Stop"}
+                </button>
+              </div>
+            </div>
+          )}
         </motion.div>
 
         {/* Emergency type modal */}
