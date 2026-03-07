@@ -473,6 +473,12 @@ function FlyToPos({ lat, lng }: { lat: number; lng: number }) {
   return null;
 }
 
+function CenterOnNav({ lat, lng }: { lat: number; lng: number }) {
+  const map = useMap();
+  useEffect(() => { map.setView([lat, lng], 18, { animate: true, duration: 0.6 }); }, [lat, lng]);
+  return null;
+}
+
 export function PilgrimGuideMap() {
   const { lang, isRTL } = useLanguage();
   const { toast } = useToast();
@@ -526,6 +532,9 @@ export function PilgrimGuideMap() {
   const [remainingM, setRemainingM] = useState(0);
   const [remainingS, setRemainingS] = useState(0);
   const [stepsOpen, setStepsOpen] = useState(false);
+  const [visitedCoords, setVisitedCoords] = useState<[number, number][]>([]);
+  const [distToNextTurn, setDistToNextTurn] = useState<number | null>(null);
+  const [approachingTurn, setApproachingTurn] = useState(false);
 
   const [crowdModal, setCrowdModal] = useState<{
     facility: Facility; crowdScore: number; alternatives: CrowdAlt[];
@@ -540,6 +549,9 @@ export function PilgrimGuideMap() {
   const stopNav = () => {
     setNavRoute(null);
     setCurrentStep(0);
+    setVisitedCoords([]);
+    setDistToNextTurn(null);
+    setApproachingTurn(false);
     if (watchIdRef.current) { navigator.geolocation.clearWatch(watchIdRef.current); watchIdRef.current = null; }
   };
 
@@ -550,10 +562,19 @@ export function PilgrimGuideMap() {
       (pos) => {
         const lat = pos.coords.latitude, lng = pos.coords.longitude;
         setGpsPos({ lat, lng, accuracy: pos.coords.accuracy });
+
+        setVisitedCoords(prev => {
+          if (prev.length === 0) return [[lat, lng]];
+          const last = prev[prev.length - 1];
+          if (haversineM(last[0], last[1], lat, lng) > 3) return [...prev, [lat, lng]];
+          return prev;
+        });
+
         const distToDest = haversineM(lat, lng, route.destination.lat, route.destination.lng);
         setRemainingM(distToDest);
         const ratio = Math.max(0, distToDest / route.totalDistM);
         setRemainingS(Math.round(route.totalDurationS * ratio));
+
         if (route.steps.length > 0) {
           let stepIdx = 0;
           let cumDist = 0;
@@ -563,15 +584,28 @@ export function PilgrimGuideMap() {
             if (traveled < cumDist) { stepIdx = i; break; }
             stepIdx = i;
           }
-          setCurrentStep(Math.min(stepIdx, route.steps.length - 1));
+          const sIdx = Math.min(stepIdx, route.steps.length - 1);
+          setCurrentStep(sIdx);
+
+          if (sIdx + 1 < route.steps.length) {
+            const nextStep = route.steps[sIdx + 1];
+            const dToNext = route.steps[sIdx].distanceM - (traveled - (cumDist - route.steps[sIdx].distanceM));
+            const d = Math.max(0, Math.round(dToNext));
+            setDistToNextTurn(d);
+            setApproachingTurn(d <= 60 && d > 0 && nextStep.icon !== "🏁");
+          } else {
+            setDistToNextTurn(null);
+            setApproachingTurn(false);
+          }
         }
+
         if (distToDest < 25) {
           toast({ title: ar ? "🏁 وصلت إلى وجهتك!" : "🏁 You have arrived!" });
           stopNav();
         }
       },
       () => {},
-      { enableHighAccuracy: true, distanceFilter: 5 }
+      { enableHighAccuracy: true, distanceFilter: 3 }
     );
   };
 
@@ -762,71 +796,111 @@ export function PilgrimGuideMap() {
         </div>
       )}
 
-      {/* Navigation HUD */}
+      {/* Navigation HUD — Google Maps style */}
       {navRoute && (
-        <div className="flex-shrink-0 border-b border-[#a8d4cb]" style={{ background: "linear-gradient(160deg, #d4ede6 0%, #f0faf7 100%)" }}>
-          {/* Destination header */}
-          <div className="px-4 py-3 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="w-9 h-9 rounded-full flex items-center justify-center text-base flex-shrink-0"
-                style={{ background: TYPE_CONFIG[navRoute.destination.type].lightHex, border: `2px solid ${TYPE_CONFIG[navRoute.destination.type].colorHex}` }}>
-                {TYPE_CONFIG[navRoute.destination.type].emoji}
-              </div>
-              <div className="min-w-0">
-                <div className="font-bold text-[#0E4D41] text-sm truncate">{ar ? navRoute.destination.nameAr : navRoute.destination.nameEn}</div>
-                <div className="flex items-center gap-3 text-[11px] text-[#2d7a5f] mt-0.5">
-                  <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{fmtDist(remainingM, ar)}</span>
-                  <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{fmtTime(remainingS, ar)}</span>
-                </div>
-              </div>
-            </div>
-            <button onClick={stopNav} className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 hover:bg-red-50 transition-colors" style={{ border: "1.5px solid #e05555" }}>
-              <X className="w-4 h-4 text-red-500" />
-            </button>
+        <div className="flex-shrink-0 border-b border-[#a8d4cb]" style={{ background: "#0E4D41" }}>
+
+          {/* Progress bar */}
+          <div className="h-1 w-full bg-white/20">
+            <div
+              className="h-full bg-white transition-all duration-700"
+              style={{ width: `${Math.round(Math.max(0, 1 - remainingM / navRoute.totalDistM) * 100)}%` }}
+            />
           </div>
 
-          {/* Current step */}
-          {navRoute.steps[currentStep] && (
-            <div className="px-4 pb-3">
-              <div className="rounded-2xl px-4 py-3 flex items-center gap-3" style={{ background: "#0E4D41" }}>
-                <span className="text-2xl flex-shrink-0">{navRoute.steps[currentStep].icon}</span>
-                <div className="flex-1 min-w-0">
-                  <div className="text-white font-bold text-sm leading-tight">
-                    {ar ? navRoute.steps[currentStep].textAr : navRoute.steps[currentStep].textEn}
-                  </div>
-                  {navRoute.steps[currentStep].distanceM > 0 && (
-                    <div className="text-green-200 text-[11px] mt-0.5">{fmtDist(navRoute.steps[currentStep].distanceM, ar)}</div>
-                  )}
+          {/* Approaching-turn alert */}
+          {approachingTurn && navRoute.steps[currentStep + 1] && (
+            <div className="mx-3 mt-2 rounded-xl px-3 py-2 flex items-center gap-2 animate-pulse"
+              style={{ background: "#f59e0b", color: "#7c2d12" }}>
+              <span className="text-xl flex-shrink-0">{navRoute.steps[currentStep + 1].icon}</span>
+              <div className="flex-1 min-w-0">
+                <div className="font-black text-xs">
+                  {ar ? `في ${fmtDist(distToNextTurn ?? 0, ar)} — ${navRoute.steps[currentStep + 1].textAr}`
+                      : `In ${fmtDist(distToNextTurn ?? 0, ar)} — ${navRoute.steps[currentStep + 1].textEn}`}
                 </div>
-                {navRoute.steps[currentStep + 1] && (
-                  <div className="flex-shrink-0 text-right">
-                    <div className="text-green-200 text-[10px] mb-0.5">{ar ? "بعدها" : "Then"}</div>
-                    <span className="text-lg">{navRoute.steps[currentStep + 1].icon}</span>
-                  </div>
-                )}
               </div>
             </div>
           )}
 
+          {/* Current step — big & clear */}
+          {navRoute.steps[currentStep] && (
+            <div className="px-3 pt-2 pb-2 flex items-center gap-3">
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0"
+                style={{ background: "rgba(255,255,255,0.15)" }}>
+                {navRoute.steps[currentStep].icon}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-white font-black text-base leading-tight">
+                  {ar ? navRoute.steps[currentStep].textAr : navRoute.steps[currentStep].textEn}
+                </div>
+                {navRoute.steps[currentStep].distanceM > 0 && (
+                  <div className="text-green-200 font-bold text-sm mt-1">
+                    {distToNextTurn !== null
+                      ? fmtDist(distToNextTurn, ar)
+                      : fmtDist(navRoute.steps[currentStep].distanceM, ar)}
+                  </div>
+                )}
+              </div>
+              <button onClick={stopNav}
+                className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
+                style={{ background: "rgba(239,68,68,0.25)", border: "1.5px solid rgba(239,68,68,0.6)" }}>
+                <X className="w-4 h-4 text-red-300" />
+              </button>
+            </div>
+          )}
+
+          {/* Destination + ETA row */}
+          <div className="px-3 pb-2 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs flex-shrink-0"
+                style={{ background: TYPE_CONFIG[navRoute.destination.type].colorHex + "33" }}>
+                {TYPE_CONFIG[navRoute.destination.type].emoji}
+              </div>
+              <span className="text-green-100 text-xs font-semibold truncate">
+                {ar ? navRoute.destination.nameAr : navRoute.destination.nameEn}
+              </span>
+            </div>
+            <div className="flex items-center gap-3 text-green-200 text-xs font-bold flex-shrink-0">
+              <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{fmtDist(remainingM, ar)}</span>
+              <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{fmtTime(remainingS, ar)}</span>
+            </div>
+          </div>
+
           {/* Steps list toggle */}
           <button
             onClick={() => setStepsOpen(!stepsOpen)}
-            className="w-full px-4 py-2 flex items-center justify-between text-[11px] font-bold text-[#0E4D41] border-t border-[#a8d4cb] hover:bg-[#a8d4cb]/20 transition-colors"
+            className="w-full px-4 py-2 flex items-center justify-between text-[11px] font-bold text-green-100 border-t border-white/10 hover:bg-white/5 transition-colors"
           >
-            <span className="flex items-center gap-1.5"><Navigation className="w-3 h-3" />{ar ? `${navRoute.steps.length} خطوات التوجيه` : `${navRoute.steps.length} navigation steps`}</span>
+            <span className="flex items-center gap-1.5">
+              <Navigation className="w-3 h-3" />
+              {ar ? `${navRoute.steps.length} خطوات التوجيه` : `${navRoute.steps.length} turn-by-turn steps`}
+            </span>
             {stepsOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>
 
           {stepsOpen && (
-            <div className="max-h-44 overflow-y-auto border-t border-[#a8d4cb]">
+            <div className="max-h-48 overflow-y-auto" style={{ background: "#0a3d2f" }}>
               {navRoute.steps.map((step, i) => (
-                <div key={i} className={`px-4 py-2.5 flex items-start gap-3 border-b border-[#a8d4cb]/40 text-xs transition-colors ${i === currentStep ? "bg-[#0E4D41]/8" : "bg-transparent"}`}>
+                <div key={i} className={`px-4 py-2.5 flex items-start gap-3 border-b border-white/5 text-xs transition-colors ${i === currentStep ? "bg-white/10" : ""}`}>
                   <span className="text-base flex-shrink-0 mt-0.5">{step.icon}</span>
                   <div className="flex-1">
-                    <div className={`font-semibold ${i === currentStep ? "text-[#0E4D41]" : "text-[#2d7a5f]"}`}>{ar ? step.textAr : step.textEn}</div>
-                    {step.distanceM > 0 && <div className="text-[#5a9e80] mt-0.5">{fmtDist(step.distanceM, ar)}</div>}
+                    <div className={`font-semibold ${i === currentStep ? "text-white" : "text-green-200"}`}>
+                      {ar ? step.textAr : step.textEn}
+                    </div>
+                    {step.distanceM > 0 && (
+                      <div className={`mt-0.5 ${i === currentStep ? "text-yellow-300 font-bold" : "text-green-400"}`}>
+                        {fmtDist(step.distanceM, ar)}
+                      </div>
+                    )}
                   </div>
-                  {i === currentStep && <div className="w-2 h-2 rounded-full bg-[#0E4D41] flex-shrink-0 mt-1.5" />}
+                  {i === currentStep && (
+                    <div className="w-2 h-2 rounded-full bg-yellow-300 flex-shrink-0 mt-1.5 animate-pulse" />
+                  )}
+                  {i < currentStep && (
+                    <div className="w-4 h-4 rounded-full bg-green-600 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-[8px] text-white font-bold">✓</span>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -863,9 +937,16 @@ export function PilgrimGuideMap() {
 
           {navRoute && (
             <>
-              <Polyline positions={navRoute.coords} pathOptions={{ color: "#1A5C8A", weight: 5, opacity: 0.9 }} />
-              <Polyline positions={navRoute.coords} pathOptions={{ color: "#ffffff", weight: 2, opacity: 0.5, dashArray: "1,10" }} />
+              {/* Remaining route — blue */}
+              <Polyline positions={navRoute.coords} pathOptions={{ color: "#1A5C8A", weight: 6, opacity: 0.9 }} />
+              <Polyline positions={navRoute.coords} pathOptions={{ color: "#ffffff", weight: 2, opacity: 0.4, dashArray: "1,10" }} />
+              {/* Traveled path — gray/green trail */}
+              {visitedCoords.length >= 2 && (
+                <Polyline positions={visitedCoords} pathOptions={{ color: "#22c55e", weight: 5, opacity: 0.8 }} />
+              )}
               <Marker position={[navRoute.destination.lat, navRoute.destination.lng]} icon={makeDestIcon(navRoute.destination.type)} zIndexOffset={900} />
+              {/* Auto-center on user during navigation */}
+              {gpsPos && <CenterOnNav lat={gpsPos.lat} lng={gpsPos.lng} />}
             </>
           )}
 
