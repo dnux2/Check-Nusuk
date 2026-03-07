@@ -248,7 +248,7 @@ export function EmergenciesPage() {
                       <button
                         data-testid={`button-track-pilgrim-${em.id}`}
                         onClick={() => navigate(`/pilgrims?pilgrimId=${pilgrim.id}`)}
-                        className={`flex-1 py-2.5 bg-secondary text-secondary-foreground font-bold rounded-xl hover:bg-secondary/70 transition-colors text-sm flex items-center justify-center gap-2 ${isRTL ? "flex-row-reverse" : ""}`}
+                        className={`flex-1 py-2.5 bg-foreground text-background font-bold rounded-xl hover:bg-foreground/85 transition-colors text-sm flex items-center justify-center gap-2 ${isRTL ? "flex-row-reverse" : ""}`}
                       >
                         <Navigation className="w-4 h-4" />
                         {ar ? "تتبع الحاج" : "Track Pilgrim"}
