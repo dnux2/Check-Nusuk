@@ -1,7 +1,7 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { AlertTriangle, Map, MessageSquare, Languages, BookOpen, Star, Droplets, Clock, CheckCircle2, ChevronRight, Stethoscope, UserSearch, Shield, X, MapPin, Radio } from "lucide-react";
+import { AlertTriangle, Map, MessageSquare, Languages, BookOpen, Star, Droplets, Clock, CheckCircle2, ChevronRight, Stethoscope, UserSearch, Shield, X, MapPin, BatteryLow, Activity, Zap } from "lucide-react";
 import { useLanguage } from "@/contexts/language-context";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -9,6 +9,32 @@ import { useToast } from "@/hooks/use-toast";
 import { type Pilgrim } from "@shared/schema";
 import { PilgrimLayout } from "@/components/pilgrim-layout";
 import { useUpdatePilgrimLocation } from "@/hooks/use-pilgrims";
+
+type SharingMode = "saver" | "normal" | "active";
+
+const MODE_INTERVALS: Record<SharingMode, number> = {
+  saver:  15 * 60 * 1000,
+  normal:  5 * 60 * 1000,
+  active:  2 * 60 * 1000,
+};
+const EMERGENCY_INTERVAL = 30 * 1000;
+const MIN_MOVE_METERS = 50;
+const LOC_QUEUE_KEY = "loc_queue_pilgrim_1";
+
+function haversineM(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function loadQueue(): { lat: number; lng: number }[] {
+  try { return JSON.parse(localStorage.getItem(LOC_QUEUE_KEY) ?? "[]"); } catch { return []; }
+}
+function saveQueue(q: { lat: number; lng: number }[]) {
+  localStorage.setItem(LOC_QUEUE_KEY, JSON.stringify(q.slice(-20)));
+}
 
 const PRAYER_TIMES = [
   { ar: "الفجر",  en: "Fajr",    time: "05:12" },
@@ -52,40 +78,110 @@ export function PilgrimHomePage() {
   const { data: pilgrim } = useQuery<Pilgrim>({ queryKey: ["/api/pilgrims/1"] });
 
   const [isSharing, setIsSharing] = useState(false);
+  const [sharingMode, setSharingMode] = useState<SharingMode>("normal");
   const [lastAccuracy, setLastAccuracy] = useState<number | null>(null);
-  const watchIdRef = useRef<number | null>(null);
+  const [countdown, setCountdown] = useState<number>(0);
+  const [queueSize, setQueueSize] = useState(0);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastSentRef = useRef<{ lat: number; lng: number } | null>(null);
+  const nextTickRef = useRef<number>(0);
   const updateLocation = useUpdatePilgrimLocation();
+
+  const isEmergency = !!pilgrim?.emergencyStatus;
+
+  const getInterval = useCallback((mode: SharingMode) => {
+    return isEmergency ? EMERGENCY_INTERVAL : MODE_INTERVALS[mode];
+  }, [isEmergency]);
+
+  const sendLocation = useCallback((lat: number, lng: number, forced = false) => {
+    const prev = lastSentRef.current;
+    if (!forced && prev && haversineM(prev.lat, prev.lng, lat, lng) < MIN_MOVE_METERS) return;
+    updateLocation.mutate(
+      { id: 1, locationLat: lat, locationLng: lng },
+      {
+        onSuccess: () => {
+          lastSentRef.current = { lat, lng };
+          const q = loadQueue();
+          if (q.length > 0) {
+            const next = q.shift()!;
+            saveQueue(q);
+            updateLocation.mutate({ id: 1, locationLat: next.lat, locationLng: next.lng });
+            setQueueSize(q.length);
+          }
+        },
+        onError: () => {
+          const q = loadQueue();
+          q.push({ lat, lng });
+          saveQueue(q);
+          setQueueSize(q.length);
+        },
+      }
+    );
+  }, [updateLocation]);
+
+  const tick = useCallback((mode: SharingMode) => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLastAccuracy(Math.round(pos.coords.accuracy));
+        sendLocation(pos.coords.latitude, pos.coords.longitude, isEmergency);
+      },
+      () => {},
+      { enableHighAccuracy: mode === "active" || isEmergency, timeout: 8000, maximumAge: mode === "saver" ? 120000 : 30000 }
+    );
+  }, [sendLocation, isEmergency]);
+
+  const startPolling = useCallback((mode: SharingMode) => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    if (countdownRef.current) clearInterval(countdownRef.current);
+    const ms = getInterval(mode);
+    tick(mode);
+    nextTickRef.current = Date.now() + ms;
+    setCountdown(Math.round(ms / 1000));
+    intervalRef.current = setInterval(() => {
+      tick(mode);
+      nextTickRef.current = Date.now() + ms;
+    }, ms);
+    countdownRef.current = setInterval(() => {
+      const remaining = Math.max(0, Math.round((nextTickRef.current - Date.now()) / 1000));
+      setCountdown(remaining);
+    }, 1000);
+  }, [tick, getInterval]);
 
   const startSharing = () => {
     if (!navigator.geolocation) {
       toast({ title: ar ? "خطأ" : "Error", description: ar ? "الجهاز لا يدعم GPS" : "Device doesn't support GPS", variant: "destructive" });
       return;
     }
-    watchIdRef.current = navigator.geolocation.watchPosition(
-      (pos) => {
-        setLastAccuracy(Math.round(pos.coords.accuracy));
-        updateLocation.mutate({ id: 1, locationLat: pos.coords.latitude, locationLng: pos.coords.longitude });
-      },
-      (err) => {
-        toast({ title: ar ? "خطأ في GPS" : "GPS Error", description: ar ? "تعذّر الوصول إلى موقعك" : "Could not access your location", variant: "destructive" });
-        setIsSharing(false);
-        watchIdRef.current = null;
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
     setIsSharing(true);
+    setQueueSize(loadQueue().length);
+    startPolling(sharingMode);
   };
 
   const stopSharing = () => {
-    if (watchIdRef.current !== null) {
-      navigator.geolocation.clearWatch(watchIdRef.current);
-      watchIdRef.current = null;
-    }
+    if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
+    if (countdownRef.current) { clearInterval(countdownRef.current); countdownRef.current = null; }
     setIsSharing(false);
     setLastAccuracy(null);
+    setCountdown(0);
   };
 
-  useEffect(() => { return () => { if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current); }; }, []);
+  const changeMode = (mode: SharingMode) => {
+    setSharingMode(mode);
+    if (isSharing) startPolling(mode);
+  };
+
+  useEffect(() => {
+    if (isSharing) startPolling(sharingMode);
+  }, [isEmergency]);
+
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (countdownRef.current) clearInterval(countdownRef.current);
+    };
+  }, []);
 
   const createEmergency = useMutation({
     mutationFn: (type: EmergencyType) =>
@@ -193,31 +289,72 @@ export function PilgrimHomePage() {
           </button>
         </motion.div>
 
-        {/* Live location sharing */}
+        {/* Smart adaptive location sharing */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
           {!isSharing ? (
-            <button
-              data-testid="btn-share-live-location"
-              onClick={startSharing}
-              className="w-full py-3.5 rounded-3xl font-bold text-sm flex items-center justify-center gap-2.5 border-2 border-[#10B981] text-[#10B981] bg-emerald-50 dark:bg-emerald-950/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-all active:scale-[0.98]"
-              dir={isRTL ? "rtl" : "ltr"}
-            >
-              <MapPin className="w-4 h-4 flex-shrink-0" />
-              {ar ? "مشاركة موقعي الحي مع المشرف" : "Share My Live Location with Supervisor"}
-            </button>
+            <div className="rounded-3xl border-2 border-[#10B981] overflow-hidden bg-emerald-50 dark:bg-emerald-950/20">
+              {/* Mode selector */}
+              <div className="px-4 pt-4 pb-2" dir={isRTL ? "rtl" : "ltr"}>
+                <p className={`text-[11px] font-semibold text-[#0E4D41]/60 mb-2.5 ${isRTL ? "text-right" : ""}`}>
+                  {ar ? "اختر وتيرة مشاركة الموقع:" : "Choose location update frequency:"}
+                </p>
+                <div className={`flex gap-2 ${isRTL ? "flex-row-reverse" : ""}`}>
+                  {([
+                    { key: "saver"  as SharingMode, labelAr: "توفير طاقة", labelEn: "Battery Saver", subAr: "كل ١٥ دقيقة", subEn: "Every 15 min", icon: <BatteryLow className="w-3.5 h-3.5" /> },
+                    { key: "normal" as SharingMode, labelAr: "عادي",        labelEn: "Normal",        subAr: "كل ٥ دقائق", subEn: "Every 5 min",  icon: <MapPin className="w-3.5 h-3.5" /> },
+                    { key: "active" as SharingMode, labelAr: "تتبع نشط",    labelEn: "Active Track",  subAr: "كل دقيقتين", subEn: "Every 2 min",  icon: <Zap className="w-3.5 h-3.5" /> },
+                  ]).map(m => (
+                    <button
+                      key={m.key}
+                      data-testid={`btn-mode-${m.key}`}
+                      onClick={() => setSharingMode(m.key)}
+                      className={`flex-1 py-2 px-1.5 rounded-2xl text-center transition-all border-2 ${
+                        sharingMode === m.key
+                          ? "border-[#10B981] bg-[#10B981] text-white"
+                          : "border-[#10B981]/30 bg-white/60 dark:bg-black/20 text-[#0E4D41] dark:text-[#10B981]"
+                      }`}
+                    >
+                      <div className="flex flex-col items-center gap-0.5">
+                        {m.icon}
+                        <span className="text-[10px] font-bold leading-tight">{ar ? m.labelAr : m.labelEn}</span>
+                        <span className="text-[9px] opacity-70">{ar ? m.subAr : m.subEn}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="px-4 pb-4">
+                <button
+                  data-testid="btn-share-live-location"
+                  onClick={startSharing}
+                  className="w-full py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 bg-[#10B981] text-white hover:bg-[#0d9e70] transition-all active:scale-[0.98]"
+                  dir={isRTL ? "rtl" : "ltr"}
+                >
+                  <MapPin className="w-4 h-4 flex-shrink-0" />
+                  {ar ? "مشاركة موقعي مع المشرف" : "Share My Location with Supervisor"}
+                </button>
+              </div>
+            </div>
           ) : (
             <div className="rounded-3xl border-2 border-[#10B981] bg-emerald-50 dark:bg-emerald-950/20 overflow-hidden">
-              <div className="flex items-center justify-between px-5 py-3.5" dir={isRTL ? "rtl" : "ltr"}>
+              {/* Status bar */}
+              <div className="flex items-center justify-between px-5 py-3" dir={isRTL ? "rtl" : "ltr"}>
                 <div className={`flex items-center gap-2.5 ${isRTL ? "flex-row-reverse" : ""}`}>
                   <span className="relative flex h-3 w-3 flex-shrink-0">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#10B981] opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-3 w-3 bg-[#10B981]"></span>
                   </span>
                   <div className={isRTL ? "text-right" : ""}>
-                    <p className="text-xs font-bold text-[#10B981]">{ar ? "يُرسَل موقعك الآن" : "Location is being shared"}</p>
-                    {lastAccuracy !== null && (
-                      <p className="text-[10px] text-[#10B981]/70">{ar ? `دقة الإشارة: ${lastAccuracy}م` : `Accuracy: ${lastAccuracy}m`}</p>
-                    )}
+                    <p className="text-xs font-bold text-[#10B981]">
+                      {isEmergency
+                        ? (ar ? "⚠ وضع الطوارئ — تحديث كل ٣٠ ثانية" : "⚠ Emergency — updating every 30s")
+                        : ar ? "موقعك يُرسَل دورياً" : "Location sharing active"}
+                    </p>
+                    <p className="text-[10px] text-[#10B981]/70">
+                      {ar
+                        ? `التالي خلال: ${countdown >= 60 ? `${Math.floor(countdown / 60)} دقيقة` : `${countdown} ثانية`}${lastAccuracy !== null ? ` · دقة: ${lastAccuracy}م` : ""}`
+                        : `Next in: ${countdown >= 60 ? `${Math.floor(countdown / 60)} min` : `${countdown}s`}${lastAccuracy !== null ? ` · ±${lastAccuracy}m` : ""}`}
+                    </p>
                   </div>
                 </div>
                 <button
@@ -229,6 +366,35 @@ export function PilgrimHomePage() {
                   {ar ? "إيقاف" : "Stop"}
                 </button>
               </div>
+              {/* Mode switcher while active */}
+              {!isEmergency && (
+                <div className={`px-5 pb-3 flex gap-2 ${isRTL ? "flex-row-reverse" : ""}`}>
+                  {([
+                    { key: "saver"  as SharingMode, labelAr: "توفير طاقة", labelEn: "Saver",   icon: <BatteryLow className="w-3 h-3" /> },
+                    { key: "normal" as SharingMode, labelAr: "عادي",        labelEn: "Normal",  icon: <MapPin className="w-3 h-3" /> },
+                    { key: "active" as SharingMode, labelAr: "نشط",         labelEn: "Active",  icon: <Zap className="w-3 h-3" /> },
+                  ]).map(m => (
+                    <button
+                      key={m.key}
+                      data-testid={`btn-active-mode-${m.key}`}
+                      onClick={() => changeMode(m.key)}
+                      className={`flex-1 py-1.5 rounded-xl text-[10px] font-bold flex items-center justify-center gap-1 transition-all border ${
+                        sharingMode === m.key
+                          ? "border-[#10B981] bg-[#10B981] text-white"
+                          : "border-[#10B981]/30 bg-white/50 dark:bg-black/20 text-[#10B981]"
+                      }`}
+                    >
+                      {m.icon}
+                      {ar ? m.labelAr : m.labelEn}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {queueSize > 0 && (
+                <div className={`px-5 pb-3 text-[10px] text-amber-600 font-semibold ${isRTL ? "text-right" : ""}`}>
+                  {ar ? `⚠ ${queueSize} تحديث في الانتظار (بدون إنترنت)` : `⚠ ${queueSize} update(s) queued (offline)`}
+                </div>
+              )}
             </div>
           )}
         </motion.div>

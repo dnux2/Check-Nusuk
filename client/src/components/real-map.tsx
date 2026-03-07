@@ -373,12 +373,24 @@ function PilgrimMarker({ pilgrim, isHighlighted, ar, isRTL, onNavigate }: Pilgri
           <div style={{ fontSize: 12, marginBottom: 3 }}>
             {ar ? "المجموعة:" : "Group:"}{" "}<span style={{ color: "#444" }}>{pilgrim.campaignGroup ?? "—"}</span>
           </div>
-          <div style={{ fontSize: 12, marginBottom: 8 }}>
+          <div style={{ fontSize: 12, marginBottom: 3 }}>
             {ar ? "التصريح:" : "Permit:"}{" "}
             <b style={{ color: pilgrim.permitStatus === "Valid" ? "#10B981" : pilgrim.permitStatus === "Expired" ? "#F59E0B" : pilgrim.permitStatus === "Pending" ? "#8B5CF6" : "#EF4444" }}>
               {pilgrim.permitStatus}
             </b>
           </div>
+          {pilgrim.lastUpdated && (() => {
+            const mins = Math.round((Date.now() - new Date(pilgrim.lastUpdated).getTime()) / 60000);
+            if (mins > 1440) return null;
+            const label = mins < 1 ? (ar ? "الآن" : "just now") : ar ? `منذ ${mins} دقيقة` : `${mins} min ago`;
+            const isLiveNow = mins < 1;
+            return (
+              <div style={{ fontSize: 11, marginBottom: 8, display: "flex", alignItems: "center", gap: 4, color: isLiveNow ? "#10B981" : "#888" }}>
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: isLiveNow ? "#10B981" : "#ccc", display: "inline-block", flexShrink: 0 }}></span>
+                {ar ? `آخر تحديث: ${label}` : `Last update: ${label}`}
+              </div>
+            );
+          })()}
           {pilgrim.emergencyStatus && (
             <div style={{ marginBottom: 8, padding: "4px 10px", background: "#FEE2E2", color: "#DC2626", borderRadius: 6, fontSize: 11, fontWeight: 700 }}>
               ⚠ {ar ? "طوارئ نشطة" : "Emergency Active"}
