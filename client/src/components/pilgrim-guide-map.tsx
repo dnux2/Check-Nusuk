@@ -71,7 +71,7 @@ const TYPE_CONFIG: Record<FacilityType, { colorHex: string; lightHex: string; em
 function makeFacilityIcon(type: FacilityType) {
   const cfg = TYPE_CONFIG[type];
   return L.divIcon({
-    html: `<div style="width:32px;height:32px;background:${cfg.colorHex};border-radius:50%;border:2px solid white;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 2px 6px rgba(0,0,0,0.3)">${cfg.emoji}</div>`,
+    html: `<div style="width:34px;height:34px;background:${cfg.lightHex};border-radius:50%;border:2.5px solid ${cfg.colorHex};display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 2px 8px ${cfg.colorHex}44">${cfg.emoji}</div>`,
     className: "",
     iconSize: [32, 32],
     iconAnchor: [16, 16],
