@@ -149,7 +149,7 @@ export function PilgrimsPage() {
     if (status === "Valid") return t("valid");
     if (status === "Expired") return t("expired");
     if (status === "UnderReview") return ar ? "جاري المراجعة" : "Under Review";
-    return t("none");
+    return ar ? "قيد التحقق" : "Pending";
   };
 
   const totalFiltered = filtered?.length ?? 0;
