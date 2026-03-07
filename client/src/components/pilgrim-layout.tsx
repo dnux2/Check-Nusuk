@@ -79,10 +79,26 @@ export function PilgrimLayout({ children }: { children: React.ReactNode }) {
             </Link>
           );
         })}
+
+        {/* Logout — right below المترجم */}
+        <button
+          onClick={() => {
+            setMobileOpen(false);
+            localStorage.removeItem("isLoggedIn");
+            localStorage.removeItem("role");
+            localStorage.removeItem("passport");
+            window.location.replace("/login?tab=pilgrim");
+          }}
+          className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-2xl transition-all duration-200 font-medium text-sm text-destructive/80 hover:bg-destructive/10 hover:text-destructive ${isRTL ? "flex-row-reverse" : ""}`}
+          data-testid="btn-logout-pilgrim"
+        >
+          <LogOut className="w-5 h-5 flex-shrink-0" />
+          <span>{ar ? "تسجيل الخروج" : "Logout"}</span>
+        </button>
       </nav>
 
       {/* Bottom section */}
-      <div className="px-4 pb-6 space-y-3 border-t border-border pt-4">
+      <div className="px-4 pb-6 border-t border-border pt-4">
         {/* SOS */}
         <Link href="/pilgrim">
           <button
@@ -96,24 +112,6 @@ export function PilgrimLayout({ children }: { children: React.ReactNode }) {
             {ar ? "طوارئ SOS" : "Emergency SOS"}
           </button>
         </Link>
-
-        {/* Logout */}
-        <div className="mt-1">
-          <button
-            onClick={() => {
-              setMobileOpen(false);
-              localStorage.removeItem("isLoggedIn");
-              localStorage.removeItem("role");
-              localStorage.removeItem("passport");
-              window.location.replace("/login?tab=pilgrim");
-            }}
-            className="w-full py-2 rounded-2xl text-destructive hover:bg-destructive/10 font-semibold text-sm flex flex-row items-center justify-center gap-2 transition-colors"
-            data-testid="btn-logout-pilgrim"
-          >
-            <LogOut className="w-4 h-4 flex-shrink-0" />
-            {ar ? "تسجيل الخروج" : "Logout"}
-          </button>
-        </div>
       </div>
     </div>
   );
