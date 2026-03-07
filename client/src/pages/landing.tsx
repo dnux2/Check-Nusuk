@@ -124,7 +124,7 @@ export function LandingPage() {
       </div>
       {/* ── Features Grid ── */}
       <main className="flex-1">
-        <section className="py-20 bg-card border-t border-border/50">
+        <section className="py-20 bg-[#eef8f2] dark:bg-card border-t border-[#c8e8d8] dark:border-border/50">
           <div className="max-w-7xl mx-auto px-6">
             <div className="text-center mb-14">
               <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-3">
