@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShieldCheck, User, Lock, Eye, EyeOff, AlertCircle, CreditCard, Hash } from "lucide-react";
+import { ShieldCheck, User, Lock, Eye, EyeOff, AlertCircle, CreditCard, Hash, ArrowRight, ArrowLeft } from "lucide-react";
 import { useLanguage } from "@/contexts/language-context";
 import logoImg from "@assets/WhatsApp_Image_2026-03-07_at_12.53.20_AM_1772834050515.jpeg";
 
@@ -83,7 +83,7 @@ export function LoginPage() {
 
   return (
     <div
-      className="min-h-screen bg-gradient-to-br from-[#0a2e26] via-[#0c3d32] to-[#052a22] flex flex-col items-center justify-center px-4 py-10"
+      className="relative min-h-screen bg-gradient-to-br from-[#0a2e26] via-[#0c3d32] to-[#052a22] flex flex-col items-center justify-center px-4 py-10"
       dir={isRTL ? "rtl" : "ltr"}
     >
       {/* Lang toggle */}
@@ -97,6 +97,18 @@ export function LoginPage() {
           className={`px-3 py-1.5 text-xs font-bold transition-all ${lang === "en" ? "bg-white text-[#0a2e26]" : "text-white/70 hover:text-white"}`}
         >EN</button>
       </div>
+
+      {/* Back button */}
+      <motion.button
+        initial={{ opacity: 0, x: isRTL ? 20 : -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        onClick={() => navigate("/")}
+        data-testid="btn-back-to-home"
+        className={`absolute top-6 ${isRTL ? "right-6" : "left-6"} flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white/80 hover:text-white text-xs font-semibold transition-all`}
+      >
+        {isRTL ? <ArrowRight className="w-3.5 h-3.5" /> : <ArrowLeft className="w-3.5 h-3.5" />}
+        {ar ? "رجوع" : "Back"}
+      </motion.button>
 
       {/* Logo */}
       <motion.div
