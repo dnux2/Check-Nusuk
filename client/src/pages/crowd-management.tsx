@@ -147,6 +147,24 @@ export function CrowdManagementPage() {
 
   const warningZones = sectors.filter(s => s.load >= 80);
 
+  // ── Emergency nav: auto-route to pilgrim from URL params on mount ─────────
+  const emergencyNavHandled = useRef(false);
+  useEffect(() => {
+    if (emergencyNavHandled.current) return;
+    const params = new URLSearchParams(search ?? "");
+    const eLat = params.get("eLat");
+    const eLng = params.get("eLng");
+    const eName = params.get("eName");
+    const eType = params.get("eType");
+    if (!eLat || !eLng) return;
+    emergencyNavHandled.current = true;
+    const colorMap: Record<string, string> = { Medical: "#e74c3c", Security: "#3498db", Lost: "#f39c12" };
+    const color = colorMap[eType ?? ""] ?? "#e74c3c";
+    const label = eName ? decodeURIComponent(eName) : (ar ? "حالة طوارئ" : "Emergency");
+    fetchOSRM(ar, SUPERVISOR_POS.lat, SUPERVISOR_POS.lng, Number(eLat), Number(eLng), label, color)
+      .then(route => { if (route) { setNavRoute(route); setStepsExpanded(true); } });
+  }, [search]);
+
   // ── Auto-scroll to panels when they become active ────────────────────────
   const panelsRef = useRef<HTMLDivElement>(null);
   useEffect(() => {

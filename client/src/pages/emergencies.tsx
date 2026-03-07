@@ -247,7 +247,11 @@ export function EmergenciesPage() {
                     {pilgrim && (
                       <button
                         data-testid={`button-track-pilgrim-${em.id}`}
-                        onClick={() => navigate(`/pilgrims?pilgrimId=${pilgrim.id}`)}
+                        onClick={() => {
+                          const lat = em.locationLat ?? pilgrim.locationLat;
+                          const lng = em.locationLng ?? pilgrim.locationLng;
+                          navigate(`/crowd-management?eLat=${lat}&eLng=${lng}&eName=${encodeURIComponent(pilgrim.name)}&eType=${em.type ?? "Medical"}`);
+                        }}
                         className={`flex-1 py-2.5 bg-foreground text-background font-bold rounded-xl hover:bg-foreground/85 transition-colors text-sm flex items-center justify-center gap-2 ${isRTL ? "flex-row-reverse" : ""}`}
                       >
                         <Navigation className="w-4 h-4" />
