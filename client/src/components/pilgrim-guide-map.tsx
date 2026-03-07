@@ -725,7 +725,7 @@ export function PilgrimGuideMap() {
       setRemainingS(route.duration);
       setStepsOpen(false);
 
-      if (gpsStatus === "granted") startLiveTracking(navData);
+      if (gpsStatus === "granted" && !customOrigin) startLiveTracking(navData);
 
       toast({
         title: ar ? `🗺️ بدأ التوجيه إلى: ${facility.nameAr}` : `🗺️ Navigation started: ${facility.nameEn}`,
@@ -1119,8 +1119,8 @@ export function PilgrimGuideMap() {
                 <Polyline positions={visitedCoords} pathOptions={{ color: "#22c55e", weight: 5, opacity: 0.8 }} />
               )}
               <Marker position={[navRoute.destination.lat, navRoute.destination.lng]} icon={makeDestIcon(navRoute.destination.type)} zIndexOffset={900} />
-              {/* Auto-center on user during navigation */}
-              {gpsPos && <CenterOnNav lat={gpsPos.lat} lng={gpsPos.lng} />}
+              {/* Auto-center on user during navigation — skip if custom origin is active */}
+              {gpsPos && !customOrigin && <CenterOnNav lat={gpsPos.lat} lng={gpsPos.lng} />}
             </>
           )}
 
