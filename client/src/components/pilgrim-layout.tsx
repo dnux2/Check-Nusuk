@@ -35,9 +35,12 @@ export function PilgrimLayout({ children }: { children: React.ReactNode }) {
   const SidebarContent = () => (
     <div className="flex flex-col h-full bg-card">
       {/* Logo */}
-      <div className="py-5 px-4 border-b border-border flex items-center justify-center">
-        <Link href="/" className="font-display font-bold text-xl tracking-tight text-foreground hover:text-primary transition-colors" data-testid="link-home-pilgrim">
-          CheckNusuk
+      <div className="py-4 px-4 border-b border-border flex items-center justify-center">
+        <Link href="/" className="flex items-center gap-2.5 group" data-testid="link-home-pilgrim">
+          <div className="w-9 h-9 rounded-xl overflow-hidden bg-[#f5e6c8] flex-shrink-0 shadow-sm">
+            <img src={logoImg} alt="CheckNusuk" className="w-full h-full object-contain" />
+          </div>
+          <span className="font-display font-bold text-lg tracking-tight text-foreground group-hover:text-primary transition-colors">CheckNusuk</span>
         </Link>
       </div>
 
@@ -167,11 +170,9 @@ export function PilgrimLayout({ children }: { children: React.ReactNode }) {
           </button>
           <div className="hidden lg:block w-10" />
 
-          {/* Center: logo only */}
-          <Link href="/" className="absolute left-1/2 -translate-x-1/2" data-testid="link-logo-pilgrim">
-            <div className="w-9 h-9 rounded-xl overflow-hidden bg-[#f5e6c8] shadow-sm hover:opacity-80 transition-opacity">
-              <img src={logoImg} alt="CheckNusuk" className="w-full h-full object-contain" />
-            </div>
+          {/* Center: project name */}
+          <Link href="/" className="absolute left-1/2 -translate-x-1/2 font-display font-bold text-lg tracking-tight text-foreground hover:text-primary transition-colors" data-testid="link-home-pilgrim-header">
+            CheckNusuk
           </Link>
 
           {/* End: SOS */}

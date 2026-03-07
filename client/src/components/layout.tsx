@@ -78,9 +78,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
         style={{ willChange: "transform" }}
       >
         {/* Logo area */}
-        <div className="relative py-5 px-4 flex items-center justify-center border-b border-border/50">
-          <Link href="/" className="font-display font-bold text-xl tracking-tight text-foreground hover:text-primary transition-colors" data-testid="link-home-admin">
-            CheckNusuk
+        <div className="relative py-4 px-4 flex items-center justify-center border-b border-border/50">
+          <Link href="/" className="flex items-center gap-2.5 group" data-testid="link-home-admin">
+            <div className="w-9 h-9 rounded-xl overflow-hidden bg-[#f5e6c8] flex-shrink-0 shadow-sm">
+              <img src={logoImg} alt="CheckNusuk" className="w-full h-full object-contain" />
+            </div>
+            <span className="font-display font-bold text-lg tracking-tight text-foreground group-hover:text-primary transition-colors">CheckNusuk</span>
           </Link>
           <button
             onClick={() => setSidebarOpen(false)}
@@ -185,11 +188,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </h2>
           </div>
 
-          {/* Center: logo */}
-          <Link href="/" className="absolute left-1/2 -translate-x-1/2" data-testid="link-logo-admin">
-            <div className="w-9 h-9 rounded-xl overflow-hidden bg-[#f5e6c8] shadow-sm hover:opacity-80 transition-opacity">
-              <img src={logoImg} alt="CheckNusuk" className="w-full h-full object-contain" />
-            </div>
+          {/* Center: project name */}
+          <Link href="/" className="absolute left-1/2 -translate-x-1/2 font-display font-bold text-lg tracking-tight text-foreground hover:text-primary transition-colors" data-testid="link-home-header">
+            CheckNusuk
           </Link>
 
           {/* Admin info — right side only */}
