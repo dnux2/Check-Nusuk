@@ -80,6 +80,14 @@ export function LandingPage() {
             }
           </motion.h1>
 
+          {/* Tag line */}
+          <motion.p
+            initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: 0.18 }}
+            className="mt-3 text-emerald-300 font-semibold text-lg sm:text-xl tracking-wide drop-shadow"
+          >
+            {ar ? "نظام حج ذكي" : "Smart Hajj System"}
+          </motion.p>
+
           {/* Sub-text */}
           <motion.p
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.55, delay: 0.2 }}
