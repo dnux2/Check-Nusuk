@@ -112,10 +112,119 @@ export function CrowdManagementPage() {
 
   const warningZones = sectors.filter(s => s.load >= 80);
 
+  // ── Shared panel JSX (used above the map) ────────────────────────────────
+  const navPanel = navRoute ? (
+    <motion.div
+      key="nav-panel-outer"
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ type: "spring", damping: 22, stiffness: 280 }}
+      className="rounded-2xl border border-border shadow-lg overflow-hidden bg-card"
+      dir={isRTL ? "rtl" : "ltr"}
+      data-testid="nav-panel"
+    >
+      <div className={`flex items-center gap-3 px-4 py-3 bg-card border-b border-border ${isRTL ? "flex-row-reverse" : ""}`}>
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: navRoute.targetColor + "20" }}>
+          <Navigation className="w-5 h-5" style={{ color: navRoute.targetColor }} />
+        </div>
+        <div className={`flex-1 min-w-0 ${isRTL ? "text-right" : ""}`}>
+          <div className="font-bold text-sm text-foreground truncate">
+            {ar ? `التوجه إلى: ${navRoute.targetName}` : `Navigate to: ${navRoute.targetName}`}
+          </div>
+          <div className={`flex items-center gap-4 text-xs text-muted-foreground mt-0.5 ${isRTL ? "flex-row-reverse" : ""}`}>
+            <span className={`flex items-center gap-1 font-semibold ${isRTL ? "flex-row-reverse" : ""}`} style={{ color: navRoute.targetColor }}>
+              <MapPin className="w-3 h-3" />{fmtDist(navRoute.distanceM, ar)}
+            </span>
+            <span className={`flex items-center gap-1 ${isRTL ? "flex-row-reverse" : ""}`}>
+              <Clock className="w-3 h-3" />{fmtDur(navRoute.durationS, ar)}
+            </span>
+            <span className="text-muted-foreground/40">·</span>
+            <span>{navRoute.steps.filter(s => s.distanceM > 0 || s.type === "arrive").length} {ar ? "خطوة" : "steps"}</span>
+          </div>
+        </div>
+        <button onClick={() => setStepsExpanded(v => !v)} className="p-1.5 rounded-lg hover:bg-secondary transition-colors flex-shrink-0 text-muted-foreground">
+          {stepsExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        </button>
+        <button onClick={() => setNavRoute(null)} className="p-1.5 rounded-lg hover:bg-destructive/10 hover:text-destructive transition-colors flex-shrink-0 text-muted-foreground">
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+      <AnimatePresence>
+        {stepsExpanded && (
+          <motion.div initial={{ height: 0 }} animate={{ height: "auto" }} exit={{ height: 0 }} transition={{ type: "spring", damping: 25, stiffness: 300 }} className="overflow-hidden">
+            <div className="overflow-y-auto max-h-48 px-3 py-2">
+              {navRoute.steps.filter(s => s.distanceM > 0 || s.type === "arrive").map((step, i) => (
+                <div key={i} className={`flex items-center gap-3 py-2 border-b border-border/40 last:border-0 ${isRTL ? "flex-row-reverse" : ""}`}>
+                  <div className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
+                    <StepIcon type={step.type} modifier={step.modifier} />
+                  </div>
+                  <span className={`flex-1 text-xs text-foreground ${isRTL ? "text-right" : ""}`}>{step.instruction}</span>
+                  {step.distanceM > 0 && <span className="text-xs text-muted-foreground font-mono flex-shrink-0">{fmtDist(step.distanceM, ar)}</span>}
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  ) : null;
+
+  const suggestPanel = (suggestType && suggestResults.length > 0) ? (() => {
+    const cfg = TYPE_CFG[suggestType];
+    return (
+      <motion.div
+        key={`suggest-${suggestType}`}
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -10 }}
+        transition={{ type: "spring", damping: 22, stiffness: 280 }}
+        className="rounded-2xl border border-border shadow-xl overflow-hidden bg-card"
+        dir={isRTL ? "rtl" : "ltr"}
+        data-testid="panel-smart-suggest"
+      >
+        <div className={`flex items-center gap-3 px-4 py-3 border-b border-border ${isRTL ? "flex-row-reverse" : ""}`} style={{ background: cfg.bg + "bb" }}>
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center text-xl flex-shrink-0" style={{ background: cfg.bg, border: `2px solid ${cfg.color}` }}>{cfg.emoji}</div>
+          <div className={`flex-1 min-w-0 ${isRTL ? "text-right" : ""}`}>
+            <div className="font-bold text-sm" style={{ color: cfg.color }}>{ar ? `اقتراح ذكي · ${cfg.labelAr}` : `Smart Pick · ${cfg.labelEn}`}</div>
+            <div className="text-xs text-muted-foreground mt-0.5">{ar ? `${suggestResults.length} مرافق مرتّبة حسب المسافة والكثافة` : `${suggestResults.length} facilities ranked by distance & crowd`}</div>
+          </div>
+          <button onClick={() => setSuggestType(null)} className="p-1.5 rounded-lg hover:bg-destructive/10 hover:text-destructive transition-colors flex-shrink-0 text-muted-foreground"><X className="w-4 h-4" /></button>
+        </div>
+        <div className="divide-y divide-border">
+          {suggestResults.map((r, i) => {
+            const crowdColor = r.crowdScore >= 70 ? "#C0392B" : r.crowdScore >= 45 ? "#B7860B" : "#0E6655";
+            const crowdLabel = r.crowdScore >= 70 ? (ar ? "مزدحم" : "Busy") : r.crowdScore >= 45 ? (ar ? "متوسط" : "Moderate") : (ar ? "هادئ" : "Quiet");
+            const isBest = i === 0;
+            return (
+              <div key={r.facility.id} className={`flex items-center gap-3 px-4 py-3 ${isBest ? "bg-primary/5" : "bg-card"} ${isRTL ? "flex-row-reverse" : ""}`} data-testid={`suggest-item-${r.facility.id}`}>
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${isBest ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}>{isBest ? "★" : i + 1}</div>
+                <div className={`flex-1 min-w-0 ${isRTL ? "text-right" : ""}`}>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-semibold text-sm text-foreground truncate">{ar ? r.facility.nameAr : r.facility.nameEn}</span>
+                    {isBest && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-primary text-primary-foreground flex-shrink-0">{ar ? "الأفضل" : "Best"}</span>}
+                  </div>
+                  <div className={`flex items-center gap-3 mt-0.5 text-xs ${isRTL ? "flex-row-reverse" : ""}`}>
+                    <span className="flex items-center gap-1 font-semibold text-muted-foreground"><MapPin className="w-3 h-3" />{fmtDist(r.distM, ar)}</span>
+                    <span className="flex items-center gap-1 font-semibold" style={{ color: crowdColor }}><Users className="w-3 h-3" />{crowdLabel} <span className="opacity-60">({r.crowdScore}%)</span></span>
+                  </div>
+                  {(r.facility.detailAr || r.facility.detailEn) && <div className="text-[11px] text-muted-foreground/60 mt-0.5 truncate">{ar ? r.facility.detailAr : r.facility.detailEn}</div>}
+                </div>
+                <button onClick={() => handleSuggestNavigate(r.facility)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white hover:opacity-90 active:scale-95 flex-shrink-0" style={{ background: cfg.color }} data-testid={`button-navigate-suggest-${r.facility.id}`}>
+                  <Navigation className="w-3.5 h-3.5" />{ar ? "توجّه" : "Go"}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </motion.div>
+    );
+  })() : null;
+
   return (
-    <div className="p-6 md:p-8 max-w-[1600px] mx-auto h-[calc(100vh-5rem)] flex flex-col" dir={isRTL ? "rtl" : "ltr"}>
+    <div className="p-6 md:p-8 max-w-[1600px] mx-auto pb-16" dir={isRTL ? "rtl" : "ltr"}>
       {/* Header */}
-      <div className="flex-shrink-0 mb-6">
+      <div className="mb-6">
         <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${isRTL ? "sm:flex-row-reverse" : ""}`}>
           <div className={isRTL ? "text-right" : ""}>
             <h1 className="text-3xl font-bold text-foreground">{t("crowdMonitoring")}</h1>
@@ -133,7 +242,6 @@ export function CrowdManagementPage() {
           </div>
         </div>
 
-        {/* Highlighted pilgrim strip */}
         {highlightedPilgrim && (
           <div className={`mt-3 flex items-center gap-3 p-3 bg-card border border-border rounded-xl text-sm font-semibold text-foreground ${isRTL ? "flex-row-reverse" : ""}`}>
             <div className="w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">
@@ -149,10 +257,29 @@ export function CrowdManagementPage() {
         )}
       </div>
 
-      <div className="flex-1 flex flex-col lg:flex-row gap-6 min-h-0">
-        {/* Map + nav panel + legend below */}
-        <div className="flex-1 flex flex-col gap-2 min-h-0">
-          <div className="flex-1 rounded-2xl overflow-hidden border border-border/50 shadow-lg relative min-h-[360px]">
+      {/* ── Panels above the map (nav + suggest) ────────────────────────────── */}
+      <AnimatePresence>
+        {suggestLoading && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="flex items-center justify-center gap-2 py-3 mb-3 rounded-2xl bg-card border border-border shadow text-sm text-muted-foreground"
+            dir={isRTL ? "rtl" : "ltr"}
+          >
+            <Sparkles className="w-4 h-4 text-primary animate-pulse" />
+            {ar ? "جاري حساب المسار…" : "Calculating route…"}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="flex flex-col gap-3 mb-3">
+        <AnimatePresence>{navRoute && navPanel}</AnimatePresence>
+        <AnimatePresence>{suggestType && suggestPanel}</AnimatePresence>
+      </div>
+
+      {/* ── Main content row: map + sidebar ─────────────────────────────────── */}
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Left: map + legend */}
+        <div className="flex-1 flex flex-col gap-3 min-w-0">
+          <div className="rounded-2xl overflow-hidden border border-border/50 shadow-lg" style={{ height: "clamp(420px, 55vh, 680px)" }}>
             <RealMap
               pilgrims={pilgrims}
               sectorData={sectors}
@@ -163,215 +290,9 @@ export function CrowdManagementPage() {
             />
           </div>
 
-          {/* Navigation panel — OUTSIDE the map, fully visible */}
-          <AnimatePresence>
-            {navRoute && (
-              <motion.div
-                key="nav-panel-outer"
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 12 }}
-                transition={{ type: "spring", damping: 20, stiffness: 280 }}
-                className="flex-shrink-0 rounded-2xl border border-border shadow-lg overflow-hidden bg-card"
-                dir={isRTL ? "rtl" : "ltr"}
-              >
-                {/* Header row */}
-                <div className={`flex items-center gap-3 px-4 py-3 bg-card border-b border-border ${isRTL ? "flex-row-reverse" : ""}`}>
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: navRoute.targetColor + "20" }}>
-                    <Navigation className="w-5 h-5" style={{ color: navRoute.targetColor }} />
-                  </div>
-                  <div className={`flex-1 min-w-0 ${isRTL ? "text-right" : ""}`}>
-                    <div className="font-bold text-sm text-foreground truncate">
-                      {ar ? `التوجه إلى: ${navRoute.targetName}` : `Navigate to: ${navRoute.targetName}`}
-                    </div>
-                    <div className={`flex items-center gap-4 text-xs text-muted-foreground mt-0.5 ${isRTL ? "flex-row-reverse" : ""}`}>
-                      <span className={`flex items-center gap-1 font-semibold ${isRTL ? "flex-row-reverse" : ""}`} style={{ color: navRoute.targetColor }}>
-                        <MapPin className="w-3 h-3" />
-                        {fmtDist(navRoute.distanceM, ar)}
-                      </span>
-                      <span className={`flex items-center gap-1 ${isRTL ? "flex-row-reverse" : ""}`}>
-                        <Clock className="w-3 h-3" />
-                        {fmtDur(navRoute.durationS, ar)}
-                      </span>
-                      <span className="text-muted-foreground/50">·</span>
-                      <span>{navRoute.steps.filter(s => s.distanceM > 0 || s.type === "arrive").length} {ar ? "خطوة" : "steps"}</span>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setStepsExpanded(v => !v)}
-                    className="p-1.5 rounded-lg hover:bg-secondary transition-colors flex-shrink-0 text-muted-foreground"
-                    title={stepsExpanded ? (ar ? "إخفاء الخطوات" : "Hide steps") : (ar ? "عرض الخطوات" : "Show steps")}
-                  >
-                    {stepsExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                  </button>
-                  <button
-                    onClick={() => setNavRoute(null)}
-                    className="p-1.5 rounded-lg hover:bg-destructive/10 hover:text-destructive transition-colors flex-shrink-0 text-muted-foreground"
-                    title={ar ? "إنهاء التنقل" : "End navigation"}
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-
-                {/* Steps list — collapsible */}
-                <AnimatePresence>
-                  {stepsExpanded && (
-                    <motion.div
-                      initial={{ height: 0 }}
-                      animate={{ height: "auto" }}
-                      exit={{ height: 0 }}
-                      transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="overflow-y-auto max-h-52 px-3 py-2">
-                        {navRoute.steps.filter(s => s.distanceM > 0 || s.type === "arrive").map((step, i) => (
-                          <div key={i} className={`flex items-center gap-3 py-2 border-b border-border/40 last:border-0 ${isRTL ? "flex-row-reverse" : ""}`}>
-                            <div className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
-                              <StepIcon type={step.type} modifier={step.modifier} />
-                            </div>
-                            <span className={`flex-1 text-xs text-foreground ${isRTL ? "text-right" : ""}`}>{step.instruction}</span>
-                            {step.distanceM > 0 && (
-                              <span className="text-xs text-muted-foreground font-mono flex-shrink-0">{fmtDist(step.distanceM, ar)}</span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Smart suggestion loading indicator */}
-          <AnimatePresence>
-            {suggestLoading && (
-              <motion.div
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                className="flex-shrink-0 flex items-center justify-center gap-2 py-3 rounded-2xl bg-card border border-border shadow text-sm text-muted-foreground"
-                dir={isRTL ? "rtl" : "ltr"}
-              >
-                <Sparkles className="w-4 h-4 text-primary animate-pulse" />
-                {ar ? "جاري حساب المسار…" : "Calculating route…"}
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Smart suggestion panel — OUTSIDE map, fully visible */}
-          <AnimatePresence>
-            {suggestType && suggestResults.length > 0 && (() => {
-              const cfg = TYPE_CFG[suggestType];
-              return (
-                <motion.div
-                  key={`suggest-${suggestType}`}
-                  initial={{ opacity: 0, y: 14 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 14 }}
-                  transition={{ type: "spring", damping: 22, stiffness: 280 }}
-                  className="flex-shrink-0 rounded-2xl border border-border shadow-xl overflow-hidden bg-card"
-                  dir={isRTL ? "rtl" : "ltr"}
-                  data-testid="panel-smart-suggest"
-                >
-                  {/* Header */}
-                  <div className={`flex items-center gap-3 px-4 py-3 border-b border-border`}
-                    style={{ background: cfg.bg + "cc" }}
-                    dir={isRTL ? "rtl" : "ltr"}
-                  >
-                    <div className="w-9 h-9 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
-                      style={{ background: cfg.bg, border: `2px solid ${cfg.color}` }}>
-                      {cfg.emoji}
-                    </div>
-                    <div className={`flex-1 min-w-0 ${isRTL ? "text-right" : ""}`}>
-                      <div className="font-bold text-sm" style={{ color: cfg.color }}>
-                        {ar ? `اقتراح ذكي · ${cfg.labelAr}` : `Smart Pick · ${cfg.labelEn}`}
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-0.5">
-                        {ar ? `${suggestResults.length} مرافق مرتّبة حسب المسافة والكثافة` : `${suggestResults.length} facilities ranked by distance & crowd`}
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => setSuggestType(null)}
-                      className="p-1.5 rounded-lg hover:bg-destructive/10 hover:text-destructive transition-colors flex-shrink-0 text-muted-foreground"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  {/* Facility cards */}
-                  <div className="divide-y divide-border">
-                    {suggestResults.map((r, i) => {
-                      const crowdColor = r.crowdScore >= 70 ? "#C0392B" : r.crowdScore >= 45 ? "#B7860B" : "#0E6655";
-                      const crowdLabelAr = r.crowdScore >= 70 ? "مزدحم" : r.crowdScore >= 45 ? "متوسط" : "هادئ";
-                      const crowdLabelEn = r.crowdScore >= 70 ? "Busy" : r.crowdScore >= 45 ? "Moderate" : "Quiet";
-                      const isBest = i === 0;
-                      return (
-                        <div
-                          key={r.facility.id}
-                          className={`flex items-center gap-3 px-4 py-3 transition-colors ${isBest ? "bg-primary/5" : "bg-card"} ${isRTL ? "flex-row-reverse" : ""}`}
-                          data-testid={`suggest-item-${r.facility.id}`}
-                        >
-                          {/* Rank badge */}
-                          <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
-                            isBest ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
-                          }`}>
-                            {isBest ? "★" : i + 1}
-                          </div>
-
-                          {/* Info */}
-                          <div className={`flex-1 min-w-0 ${isRTL ? "text-right" : ""}`}>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-semibold text-sm text-foreground truncate">
-                                {ar ? r.facility.nameAr : r.facility.nameEn}
-                              </span>
-                              {isBest && (
-                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-primary text-primary-foreground flex-shrink-0">
-                                  {ar ? "الأفضل" : "Best"}
-                                </span>
-                              )}
-                            </div>
-                            <div className={`flex items-center gap-3 mt-1 text-xs text-muted-foreground ${isRTL ? "flex-row-reverse" : ""}`}>
-                              <span className={`flex items-center gap-1 font-semibold ${isRTL ? "flex-row-reverse" : ""}`}>
-                                <MapPin className="w-3 h-3 flex-shrink-0" />
-                                {fmtDist(r.distM, ar)}
-                              </span>
-                              <span
-                                className={`flex items-center gap-1 font-semibold ${isRTL ? "flex-row-reverse" : ""}`}
-                                style={{ color: crowdColor }}
-                              >
-                                <Users className="w-3 h-3 flex-shrink-0" />
-                                {ar ? crowdLabelAr : crowdLabelEn}
-                                <span className="text-[10px] opacity-70">({r.crowdScore}%)</span>
-                              </span>
-                            </div>
-                            {(r.facility.detailAr || r.facility.detailEn) && (
-                              <div className="text-[11px] text-muted-foreground/70 mt-0.5 truncate">
-                                {ar ? r.facility.detailAr : r.facility.detailEn}
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Navigate button */}
-                          <button
-                            onClick={() => handleSuggestNavigate(r.facility)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white transition-all hover:opacity-90 active:scale-95 flex-shrink-0"
-                            style={{ background: cfg.color }}
-                            data-testid={`button-navigate-suggest-${r.facility.id}`}
-                          >
-                            <Navigation className="w-3.5 h-3.5 flex-shrink-0" />
-                            {ar ? "توجّه" : "Go"}
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </motion.div>
-              );
-            })()}
-          </AnimatePresence>
-
-          {/* Legend strip — outside the map so it never covers content */}
-          <div className={`flex-shrink-0 flex flex-wrap items-center gap-x-5 gap-y-1.5 px-2 py-1.5 bg-card border border-border/60 rounded-xl text-xs text-muted-foreground ${isRTL ? "flex-row-reverse" : ""}`} dir={isRTL ? "rtl" : "ltr"}>
-            <span className="font-bold text-foreground/60 text-[10px] uppercase tracking-wider">{ar ? "مفتاح الألوان" : "Legend"}</span>
+          {/* Legend strip */}
+          <div className={`flex flex-wrap items-center gap-x-5 gap-y-1.5 px-3 py-2 bg-card border border-border/60 rounded-xl text-xs text-muted-foreground ${isRTL ? "flex-row-reverse" : ""}`} dir={isRTL ? "rtl" : "ltr"}>
+            <span className="font-bold text-foreground/50 text-[10px] uppercase tracking-wider">{ar ? "مفتاح الألوان" : "Legend"}</span>
             <span className="w-px h-4 bg-border/60 hidden sm:block" />
             {[
               { color: "#EF4444", label: ar ? "اكتظاظ" : "Warning" },
@@ -402,75 +323,43 @@ export function CrowdManagementPage() {
           </div>
         </div>
 
-        {/* Sector status sidebar */}
-        <div className="w-full lg:w-80 flex flex-col gap-4 overflow-y-auto">
-          <h3 className={`font-display font-bold text-lg flex-shrink-0 ${isRTL ? "text-right" : ""}`}>
-            {t("sectorStatus")}
-          </h3>
+        {/* Right: sector sidebar */}
+        <div className="w-full lg:w-80 flex flex-col gap-4">
+          <h3 className={`font-display font-bold text-lg ${isRTL ? "text-right" : ""}`}>{t("sectorStatus")}</h3>
 
-          {/* Congestion warning — moved to sidebar so it never covers the map */}
           {warningZones.length > 0 && (
-            <div
-              className={`bg-destructive/10 border border-destructive/40 rounded-xl p-4 flex-shrink-0`}
-              dir={isRTL ? "rtl" : "ltr"}
-            >
+            <div className="bg-destructive/10 border border-destructive/40 rounded-xl p-4" dir={isRTL ? "rtl" : "ltr"}>
               <h3 className={`font-bold flex items-center gap-2 mb-1.5 text-destructive text-sm ${isRTL ? "flex-row-reverse" : ""}`}>
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                {t("congestionWarning")}
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />{t("congestionWarning")}
               </h3>
               <p className={`text-xs text-destructive/80 mb-3 leading-relaxed ${isRTL ? "text-right" : ""}`}>
-                {warningZones.map(z => ar ? z.nameAr : z.nameEn).join("، ")}
-                {" — "}
-                {ar ? "تجاوزت ٨٠٪ من الطاقة" : "exceeded 80% capacity"}
+                {warningZones.map(z => ar ? z.nameAr : z.nameEn).join("، ")} — {ar ? "تجاوزت ٨٠٪ من الطاقة" : "exceeded 80% capacity"}
               </p>
-              <button className="w-full py-2 bg-destructive text-white text-xs font-bold rounded-lg hover:bg-destructive/90 transition-colors">
-                {t("executeRedirection")}
-              </button>
+              <button className="w-full py-2 bg-destructive text-white text-xs font-bold rounded-lg hover:bg-destructive/90 transition-colors">{t("executeRedirection")}</button>
             </div>
           )}
+
           {sectors.map(s => {
             const isWarning = s.load >= 80;
             const isBusy = s.load >= 50 && s.load < 80;
             return (
-              <div
-                key={s.id}
-                className={`bg-card p-4 rounded-xl border shadow-sm transition-colors ${
-                  isWarning ? "border-destructive/40" : "border-border"
-                }`}
-              >
+              <div key={s.id} className={`bg-card p-4 rounded-xl border shadow-sm ${isWarning ? "border-destructive/40" : "border-border"}`}>
                 <div className={`flex justify-between items-end mb-2 ${isRTL ? "flex-row-reverse" : ""}`}>
                   <div className={isRTL ? "text-right" : ""}>
                     <div className="text-xs font-bold text-muted-foreground mb-1 font-mono">{s.id}</div>
                     <div className="font-bold">{ar ? s.nameAr : s.nameEn}</div>
                   </div>
                   <div className={`text-right ${isRTL ? "text-left" : ""}`}>
-                    <div className={`text-lg font-bold font-mono ${
-                      isWarning ? "text-destructive" : isBusy ? "text-accent" : "text-primary"
-                    }`}>
-                      {s.load}%
-                    </div>
-                    <div className={`text-xs font-semibold ${
-                      isWarning ? "text-destructive/70" : "text-muted-foreground"
-                    }`}>
-                      {ar
-                        ? isWarning ? "تحذير" : isBusy ? "مزدحم" : s.load < 5 ? "فارغ" : "طبيعي"
-                        : s.status}
+                    <div className={`text-lg font-bold font-mono ${isWarning ? "text-destructive" : isBusy ? "text-accent" : "text-primary"}`}>{s.load}%</div>
+                    <div className={`text-xs font-semibold ${isWarning ? "text-destructive/70" : "text-muted-foreground"}`}>
+                      {ar ? (isWarning ? "تحذير" : isBusy ? "مزدحم" : s.load < 5 ? "فارغ" : "طبيعي") : s.status}
                     </div>
                   </div>
                 </div>
                 <div className="h-2.5 bg-secondary rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all duration-1000 ${
-                      isWarning ? "bg-destructive" : isBusy ? "bg-accent" : "bg-muted-foreground/40"
-                    }`}
-                    style={{ width: `${s.load}%` }}
-                  />
+                  <div className={`h-full rounded-full transition-all duration-1000 ${isWarning ? "bg-destructive" : isBusy ? "bg-accent" : "bg-muted-foreground/40"}`} style={{ width: `${s.load}%` }} />
                 </div>
-                {isWarning && (
-                  <p className={`text-xs text-destructive/80 mt-2 font-medium ${isRTL ? "text-right" : ""}`}>
-                    {ar ? "⚠ اكتظاظ شديد — يُنصح بتحويل المسار" : "⚠ High congestion — redirect advised"}
-                  </p>
-                )}
+                {isWarning && <p className={`text-xs text-destructive/80 mt-2 font-medium ${isRTL ? "text-right" : ""}`}>{ar ? "⚠ اكتظاظ شديد — يُنصح بتحويل المسار" : "⚠ High congestion — redirect advised"}</p>}
               </div>
             );
           })}
