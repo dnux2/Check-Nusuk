@@ -602,6 +602,15 @@ Provide a very brief analysis (2–3 sentences) explaining which route is better
 }
 
 async function seedDatabase() {
+  // Always ensure test accounts exist (for demo purposes on any environment)
+  const testAccounts = [
+    { name: "Ahmed Ramadan", nationality: "Egyptian", passportNumber: "A18876529", phone: "+201001234567", campaignGroup: "Al-Tawheed Group", permitStatus: "Valid", locationLat: 21.4225, locationLng: 39.8262, emergencyStatus: false, age: 35, gender: "Male" },
+    { name: "Salman Ali",    nationality: "Pakistani", passportNumber: "A28354401", phone: "+923001234567", campaignGroup: "Pak-Hajj Campaign", permitStatus: "Valid", locationLat: 21.4210, locationLng: 39.8270, emergencyStatus: false, age: 45, gender: "Male" },
+  ];
+  for (const account of testAccounts) {
+    try { await storage.createPilgrim(account as any); } catch { /* already exists */ }
+  }
+
   const existingPilgrims = await storage.getPilgrims({ limit: 100 });
   if (existingPilgrims.length < 50) {
     const seedPilgrims = [
