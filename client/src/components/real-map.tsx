@@ -3,9 +3,10 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { MapContainer, TileLayer, Circle, Marker, Popup, Tooltip, useMap } from "react-leaflet";
 import L from "leaflet";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, AlertTriangle, MapPin, Activity } from "lucide-react";
+import { X, AlertTriangle, MapPin, Activity, Navigation } from "lucide-react";
 import { type Pilgrim } from "@shared/schema";
 import { useLanguage } from "@/contexts/language-context";
+import { useToast } from "@/hooks/use-toast";
 
 // Fix default icon paths broken by Vite bundling
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -221,6 +222,7 @@ interface RealMapProps {
 export function RealMap({ pilgrims, sectorData, onZoneClick, highlightedPilgrimId }: RealMapProps) {
   const { lang, isRTL } = useLanguage();
   const ar = lang === "ar";
+  const { toast } = useToast();
   const [selectedZone, setSelectedZone] = useState<Zone | null>(null);
 
   const highlightedPilgrim = highlightedPilgrimId
@@ -378,8 +380,20 @@ export function RealMap({ pilgrims, sectorData, onZoneClick, highlightedPilgrimI
               </div>
             )}
 
-            <div className="flex gap-2">
-              <button className="flex-1 py-2.5 bg-primary text-primary-foreground text-sm font-bold rounded-xl hover:bg-primary/90 transition-colors">
+            <div className={`flex gap-2 ${isRTL ? "flex-row-reverse" : ""}`}>
+              <button
+                className={`flex-1 py-2.5 bg-primary text-primary-foreground text-sm font-bold rounded-xl hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 ${isRTL ? "flex-row-reverse" : ""}`}
+                onClick={() => {
+                  toast({
+                    title: ar ? "جارٍ تحويل المسار" : "Rerouting in Progress",
+                    description: ar
+                      ? `تم إرسال تعليمات تحويل الحشود بعيداً عن ${selectedZone?.nameAr}. المسارات البديلة نشطة.`
+                      : `Crowd diversion instructions sent away from ${selectedZone?.nameEn}. Alternate routes are active.`,
+                  });
+                  setSelectedZone(null);
+                }}
+              >
+                <Navigation className="w-4 h-4" />
                 {ar ? "تحويل المسار" : "Redirect Route"}
               </button>
               <button className="py-2.5 px-3 bg-secondary text-secondary-foreground rounded-xl hover:bg-secondary/80 transition-colors">
@@ -407,8 +421,8 @@ export function RealMap({ pilgrims, sectorData, onZoneClick, highlightedPilgrimI
         )}
       </AnimatePresence>
 
-      {/* Legend */}
-      <div className={`absolute top-4 ${isRTL ? "right-4" : "left-4"} bg-card/92 backdrop-blur-xl border border-border rounded-xl p-3 shadow-xl`} style={{ zIndex: 850 }} dir={isRTL ? "rtl" : "ltr"}>
+      {/* Legend — always on the LEFT side (opposite the zone popup) */}
+      <div className={`absolute top-4 ${isRTL ? "left-4" : "right-4"} bg-card/92 backdrop-blur-xl border border-border rounded-xl p-3 shadow-xl`} style={{ zIndex: 850 }} dir={isRTL ? "rtl" : "ltr"}>
         <div className="text-xs font-bold text-muted-foreground mb-2 uppercase tracking-wider">{ar ? "مستوى الازدحام" : "Density"}</div>
         {[
           { color: "#EF4444", label: ar ? "تحذير" : "Warning" },
