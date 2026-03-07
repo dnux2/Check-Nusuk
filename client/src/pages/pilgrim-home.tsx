@@ -276,23 +276,37 @@ export function PilgrimHomePage() {
         </motion.div>
 
         {/* SOS button */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
-          <button
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="flex flex-col items-center gap-2"
+        >
+          <motion.button
             onClick={() => !sosSent && setShowTypeModal(true)}
             disabled={sosSent || createEmergency.isPending}
-            className={`w-full py-4 rounded-3xl font-bold text-base flex flex-row items-center justify-center gap-3 transition-all shadow-md active:scale-[0.98]
-              ${sosSent ? "bg-muted text-muted-foreground" : "text-white"}`}
-            style={!sosSent ? { background: "linear-gradient(135deg, #f07070 0%, #c0392b 100%)" } : {}}
-            dir="ltr"
+            whileTap={!sosSent ? { scale: 0.93 } : {}}
+            animate={!sosSent ? { boxShadow: ["0 0 0 0 rgba(220,38,38,0.5)", "0 0 0 18px rgba(220,38,38,0)"] } : {}}
+            transition={{ repeat: Infinity, duration: 1.6, ease: "easeOut" }}
+            className={`w-24 h-24 rounded-full font-bold text-sm flex flex-col items-center justify-center gap-1 transition-colors
+              ${sosSent ? "bg-muted text-muted-foreground shadow-sm" : "text-white shadow-xl shadow-red-500/40"}`}
+            style={!sosSent ? { background: "linear-gradient(145deg, #f07070 0%, #c0392b 100%)" } : {}}
             data-testid="btn-sos-home"
           >
-            <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+            <AlertTriangle className="w-6 h-6 flex-shrink-0" />
+            <span className="text-[11px] font-extrabold tracking-wide leading-none">
+              {sosSent
+                ? (ar ? "تم الإرسال" : "Sent ✓")
+                : createEmergency.isPending
+                ? (ar ? "إرسال…" : "Sending…")
+                : "SOS"}
+            </span>
+          </motion.button>
+          <span className="text-[11px] font-semibold text-muted-foreground">
             {sosSent
-              ? (ar ? "✓ تم إرسال نداء الطوارئ — ابقَ في مكانك" : "✓ SOS Sent — Help is on the way")
-              : createEmergency.isPending
-              ? (ar ? "جارٍ الإرسال…" : "Sending…")
-              : (ar ? "زر الطوارئ SOS" : "SOS Emergency")}
-          </button>
+              ? (ar ? "ابقَ في مكانك، المساعدة في الطريق" : "Help is on the way")
+              : (ar ? "اضغط عند الطوارئ" : "Press in emergency")}
+          </span>
         </motion.div>
 
         {/* Smart adaptive location sharing */}
