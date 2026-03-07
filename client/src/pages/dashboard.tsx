@@ -5,6 +5,7 @@ import { Users, AlertTriangle, ShieldAlert, Activity, LayoutDashboard } from "lu
 import { usePilgrims } from "@/hooks/use-pilgrims";
 import { useEmergencies } from "@/hooks/use-emergencies";
 import { useAlerts } from "@/hooks/use-alerts";
+import { useQuery } from "@tanstack/react-query";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from "recharts";
 import { motion } from "framer-motion";
 import { useLanguage } from "@/contexts/language-context";
@@ -33,9 +34,18 @@ export function Dashboard() {
   const { data: alerts } = useAlerts();
   const { t, isRTL } = useLanguage();
 
+  const { data: crowdData } = useQuery<{ zones: { load: number }[] }>({
+    queryKey: ["/api/crowd/assess"],
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });
+
   const totalPilgrims = pilgrims?.length ?? 0;
   const activeEmergencies = emergencies?.filter(e => e.status === "Active").length ?? 0;
   const activeAlerts = alerts?.filter(a => a.status === "Active").length ?? 0;
+  const avgCrowdDensity = crowdData?.zones?.length
+    ? Math.round(crowdData.zones.reduce((sum, z) => sum + z.load, 0) / crowdData.zones.length)
+    : null;
 
   return (
     <div className="p-6 md:p-8 max-w-[1600px] mx-auto space-y-8" dir={isRTL ? "rtl" : "ltr"}>
@@ -58,7 +68,7 @@ export function Dashboard() {
         <StatCard delay={0.1} title={t("totalPilgrimsTracked")} value={totalPilgrims.toLocaleString()} icon={<Users className="w-6 h-6" />} trend="+2.4%" trendUp={true} />
         <StatCard delay={0.2} title={t("activeEmergenciesCard")} value={activeEmergencies} icon={<AlertTriangle className="w-6 h-6" />} trend="-1" trendUp={true} />
         <StatCard delay={0.3} title={t("securityAlerts")} value={activeAlerts} icon={<ShieldAlert className="w-6 h-6" />} trend="+4" trendUp={false} />
-        <StatCard delay={0.4} title={t("avgCrowdDensity")} value="68%" icon={<Activity className="w-6 h-6" />} trend="-5%" trendUp={true} />
+        <StatCard delay={0.4} title={t("avgCrowdDensity")} value={avgCrowdDensity !== null ? `${avgCrowdDensity}%` : "…"} icon={<Activity className="w-6 h-6" />} trend="-5%" trendUp={true} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
