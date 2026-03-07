@@ -20,8 +20,11 @@ function DisableParentScroll() {
   const map = useMap();
   useEffect(() => {
     const container = map.getContainer();
-    const saved: Array<{ el: HTMLElement; overflowY: string; overflowX: string }> = [];
+    const saved: Array<{ el: HTMLElement; overflowY: string; overflowX: string; touchAction: string }> = [];
     let active = false;
+
+    // Apply touch-action:none so browser allows single-finger pan
+    container.style.touchAction = "none";
 
     const lockAll = () => {
       if (active) return;
@@ -32,18 +35,20 @@ function DisableParentScroll() {
         const oy = cs.overflowY;
         const ox = cs.overflowX;
         if (oy === "auto" || oy === "scroll" || ox === "auto" || ox === "scroll") {
-          saved.push({ el, overflowY: el.style.overflowY, overflowX: el.style.overflowX });
+          saved.push({ el, overflowY: el.style.overflowY, overflowX: el.style.overflowX, touchAction: el.style.touchAction });
           el.style.overflowY = "hidden";
           el.style.overflowX = "hidden";
+          el.style.touchAction = "none";
         }
         el = el.parentElement;
       }
     };
 
     const unlockAll = () => {
-      saved.forEach(({ el, overflowY, overflowX }) => {
+      saved.forEach(({ el, overflowY, overflowX, touchAction }) => {
         el.style.overflowY = overflowY;
         el.style.overflowX = overflowX;
+        el.style.touchAction = touchAction;
       });
       saved.length = 0;
       active = false;
@@ -52,11 +57,18 @@ function DisableParentScroll() {
     container.addEventListener("mousedown", lockAll, { capture: true });
     document.addEventListener("mouseup", unlockAll, { capture: true });
     document.addEventListener("mouseleave", unlockAll, { capture: true });
+    // Touch events for mobile single-finger pan
+    container.addEventListener("touchstart", lockAll, { capture: true, passive: true });
+    document.addEventListener("touchend", unlockAll, { capture: true, passive: true });
+    document.addEventListener("touchcancel", unlockAll, { capture: true, passive: true });
 
     return () => {
       container.removeEventListener("mousedown", lockAll, { capture: true });
       document.removeEventListener("mouseup", unlockAll, { capture: true });
       document.removeEventListener("mouseleave", unlockAll, { capture: true });
+      container.removeEventListener("touchstart", lockAll, { capture: true });
+      document.removeEventListener("touchend", unlockAll, { capture: true });
+      document.removeEventListener("touchcancel", unlockAll, { capture: true });
       unlockAll();
     };
   }, [map]);
