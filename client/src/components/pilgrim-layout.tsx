@@ -81,21 +81,6 @@ export function PilgrimLayout({ children }: { children: React.ReactNode }) {
 
       {/* Bottom section */}
       <div className="px-4 pb-6 space-y-3 border-t border-border pt-4">
-        {/* Language toggle */}
-        <div className="flex items-center bg-secondary rounded-lg overflow-hidden border border-border">
-          <button
-            onClick={() => setLang("ar")}
-            className={`flex-1 py-1.5 text-xs font-bold transition-all ${lang === "ar" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
-          >
-            ع
-          </button>
-          <button
-            onClick={() => setLang("en")}
-            className={`flex-1 py-1.5 text-xs font-bold transition-all ${lang === "en" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
-          >
-            EN
-          </button>
-        </div>
         {/* SOS */}
         <Link href="/pilgrim">
           <button
@@ -160,15 +145,28 @@ export function PilgrimLayout({ children }: { children: React.ReactNode }) {
       <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
         {/* Top bar — mobile & desktop (desktop only when no sidebar) */}
         <header className={`h-14 flex-shrink-0 flex items-center justify-between px-4 bg-card/90 backdrop-blur-md border-b border-border sticky top-0 z-10 shadow-sm ${isRTL ? "flex-row-reverse" : ""}`}>
-          {/* Start: hamburger */}
-          <button
-            onClick={() => setMobileOpen(true)}
-            className="lg:hidden p-1.5 rounded-lg hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
-            data-testid="btn-open-pilgrim-menu"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
-          <div className="hidden lg:block w-10" />
+          {/* Start: hamburger + lang toggle */}
+          <div className={`flex items-center gap-2 ${isRTL ? "flex-row-reverse" : ""}`}>
+            <button
+              onClick={() => setMobileOpen(true)}
+              className="lg:hidden p-1.5 rounded-lg hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
+              data-testid="btn-open-pilgrim-menu"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <div className="flex items-center bg-secondary rounded-lg overflow-hidden border border-border">
+              <button
+                onClick={() => setLang("ar")}
+                className={`px-2 py-1 text-xs font-bold transition-all ${lang === "ar" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                data-testid="pilgrim-lang-ar"
+              >ع</button>
+              <button
+                onClick={() => setLang("en")}
+                className={`px-2 py-1 text-xs font-bold transition-all ${lang === "en" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                data-testid="pilgrim-lang-en"
+              >EN</button>
+            </div>
+          </div>
 
           {/* Center: project name */}
           <Link href="/" className="absolute left-1/2 -translate-x-1/2 font-display font-bold text-lg tracking-tight text-foreground hover:text-primary transition-colors" data-testid="link-home-pilgrim-header">
