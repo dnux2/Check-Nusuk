@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useEmergencies, useResolveEmergency } from "@/hooks/use-emergencies";
 import { usePilgrims } from "@/hooks/use-pilgrims";
-import { AlertTriangle, MapPin, CheckCircle, ShieldCheck, User, Phone, HeartPulse, Navigation } from "lucide-react";
+import { AlertTriangle, MapPin, CheckCircle, ShieldCheck, User, Phone, HeartPulse, Navigation, MessageSquare, PhoneCall } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
@@ -242,6 +242,30 @@ export function EmergenciesPage() {
                 </span>
               </div>
 
+              {/* Quick Contact buttons — always shown when pilgrim has data */}
+              {pilgrim && (
+                <div className={`px-5 pb-3 flex gap-2 ${isRTL ? "flex-row-reverse" : ""}`}>
+                  {pilgrim.phone && (
+                    <a
+                      href={`tel:${pilgrim.phone}`}
+                      data-testid={`button-call-pilgrim-${em.id}`}
+                      className={`flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-colors text-sm flex items-center justify-center gap-2 ${isRTL ? "flex-row-reverse" : ""}`}
+                    >
+                      <PhoneCall className="w-4 h-4" />
+                      {ar ? "اتصال" : "Call"}
+                    </a>
+                  )}
+                  <button
+                    data-testid={`button-chat-pilgrim-${em.id}`}
+                    onClick={() => navigate(`/chat?pilgrimId=${pilgrim.id}`)}
+                    className={`flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors text-sm flex items-center justify-center gap-2 ${isRTL ? "flex-row-reverse" : ""}`}
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    {ar ? "شات" : "Chat"}
+                  </button>
+                </div>
+              )}
+
               {/* Action buttons */}
               <div className={`px-5 pb-5 flex gap-2 ${isRTL ? "flex-row-reverse" : ""}`}>
                 {em.status === "Active" ? (
@@ -257,7 +281,7 @@ export function EmergenciesPage() {
                         className={`flex-1 py-2.5 bg-foreground text-background font-bold rounded-xl hover:bg-foreground/85 transition-colors text-sm flex items-center justify-center gap-2 ${isRTL ? "flex-row-reverse" : ""}`}
                       >
                         <Navigation className="w-4 h-4" />
-                        {ar ? "تتبع الحاج" : "Track Pilgrim"}
+                        {ar ? "تتبع" : "Track"}
                       </button>
                     )}
                     <button
