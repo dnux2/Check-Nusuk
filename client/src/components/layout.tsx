@@ -137,13 +137,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
       {/* Main content — shifts right when sidebar is open on desktop */}
       <motion.main
-        className="flex-1 flex flex-col h-full overflow-hidden relative min-w-0"
+        className="flex-1 flex flex-col h-screen relative min-w-0"
         animate={{ marginInlineStart: !isMobile && sidebarOpen ? "288px" : "0px" }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
         style={{ willChange: "margin" }}
       >
         {/* Header */}
-        <header className={`relative h-16 flex-shrink-0 border-b border-border bg-card/80 backdrop-blur-md flex items-center justify-between px-4 z-10 ${isRTL ? "flex-row-reverse" : ""}`}>
+        <header className={`sticky top-0 z-10 h-16 flex-shrink-0 border-b border-border bg-card/80 backdrop-blur-md flex items-center justify-between px-4 ${isRTL ? "flex-row-reverse" : ""}`}>
           <div className={`flex items-center gap-2 ${isRTL ? "flex-row-reverse" : ""}`}>
             {/* Sidebar toggle */}
             <button
