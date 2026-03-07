@@ -61,6 +61,26 @@ export async function registerRoutes(
     }
   });
 
+  app.patch("/api/pilgrims/:id/health", async (req, res) => {
+    try {
+      const healthSchema = z.object({
+        bloodType: z.string().optional(),
+        allergies: z.string().optional(),
+        medicalConditions: z.string().optional(),
+        emergencyContact: z.string().optional(),
+        healthStatus: z.enum(["Good", "Stable", "NeedsAttention"]).optional(),
+      });
+      const input = healthSchema.parse(req.body);
+      const pilgrim = await storage.updatePilgrimHealth(Number(req.params.id), input);
+      res.json(pilgrim);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      return res.status(404).json({ message: "Pilgrim not found" });
+    }
+  });
+
   // Emergencies
   app.get(api.emergencies.list.path, async (req, res) => {
     const emergencies = await storage.getEmergencies();
@@ -179,7 +199,7 @@ async function seedDatabase() {
       { name: "Mohammed Khaled", nationality: "Egyptian", passportNumber: "A23456789", phone: "+201002345678", campaignGroup: "Al-Nour Group", permitStatus: "Valid", locationLat: 21.4231, locationLng: 39.8248, emergencyStatus: false },
       { name: "Omar Hassan", nationality: "Egyptian", passportNumber: "A34567890", phone: "+201003456789", campaignGroup: "Al-Tawheed Group", permitStatus: "Expired", locationLat: 21.4218, locationLng: 39.8275, emergencyStatus: false },
       { name: "Layla Mostafa", nationality: "Egyptian", passportNumber: "A45678901", phone: "+201004567890", campaignGroup: "Cairo Hajj Office", permitStatus: "Valid", locationLat: 21.4240, locationLng: 39.8255, emergencyStatus: false },
-      { name: "Ibrahim Youssef", nationality: "Egyptian", passportNumber: "A56789012", phone: "+201005678901", campaignGroup: "Al-Nour Group", permitStatus: "None", locationLat: 21.4215, locationLng: 39.8290, emergencyStatus: false },
+      { name: "Ibrahim Youssef", nationality: "Egyptian", passportNumber: "A56789012", phone: "+201005678901", campaignGroup: "Al-Nour Group", permitStatus: "Pending", locationLat: 21.4215, locationLng: 39.8290, emergencyStatus: false },
       // Indonesian
       { name: "Muhammad Rahman", nationality: "Indonesian", passportNumber: "B98765432", phone: "+6281234567890", campaignGroup: "Hajj Travel Indo", permitStatus: "Valid", locationLat: 21.4230, locationLng: 39.8250, emergencyStatus: true },
       { name: "Siti Rahma", nationality: "Indonesian", passportNumber: "B12345678", phone: "+6281345678901", campaignGroup: "Hajj Travel Indo", permitStatus: "Valid", locationLat: 21.4145, locationLng: 39.8895, emergencyStatus: false },
@@ -187,7 +207,7 @@ async function seedDatabase() {
       { name: "Dewi Putri", nationality: "Indonesian", passportNumber: "B34567890", phone: "+6281567890123", campaignGroup: "Kemenag Group", permitStatus: "Expired", locationLat: 21.4135, locationLng: 39.8920, emergencyStatus: false },
       { name: "Rizky Pratama", nationality: "Indonesian", passportNumber: "B45678901", phone: "+6281678901234", campaignGroup: "Hajj Travel Indo", permitStatus: "Valid", locationLat: 21.4125, locationLng: 39.8880, emergencyStatus: false },
       // Pakistani
-      { name: "Fatima Noor", nationality: "Pakistani", passportNumber: "C45678912", phone: "+923001234567", campaignGroup: "Pak-Hajj Campaign", permitStatus: "None", locationLat: 21.4210, locationLng: 39.8270, emergencyStatus: false },
+      { name: "Fatima Noor", nationality: "Pakistani", passportNumber: "C45678912", phone: "+923001234567", campaignGroup: "Pak-Hajj Campaign", permitStatus: "Pending", locationLat: 21.4210, locationLng: 39.8270, emergencyStatus: false },
       { name: "Ali Khan", nationality: "Pakistani", passportNumber: "C12345678", phone: "+923012345678", campaignGroup: "Pak-Hajj Campaign", permitStatus: "Valid", locationLat: 21.4200, locationLng: 39.8260, emergencyStatus: false },
       { name: "Usman Qureshi", nationality: "Pakistani", passportNumber: "C23456789", phone: "+923023456789", campaignGroup: "Lahore Hajj Group", permitStatus: "Valid", locationLat: 21.4220, locationLng: 39.8280, emergencyStatus: false },
       { name: "Aisha Siddiqui", nationality: "Pakistani", passportNumber: "C34567890", phone: "+923034567890", campaignGroup: "Lahore Hajj Group", permitStatus: "Expired", locationLat: 21.4205, locationLng: 39.8295, emergencyStatus: false },
@@ -203,7 +223,7 @@ async function seedDatabase() {
       { name: "Fatima Ozdemir", nationality: "Turkish", passportNumber: "T23456789", phone: "+905302345678", campaignGroup: "Diyanet Tours", permitStatus: "Valid", locationLat: 21.3825, locationLng: 39.9295, emergencyStatus: false },
       { name: "Ali Kaya", nationality: "Turkish", passportNumber: "T34567890", phone: "+905303456789", campaignGroup: "Istanbul Hajj Group", permitStatus: "Expired", locationLat: 21.3850, locationLng: 39.9270, emergencyStatus: false },
       { name: "Ayse Demir", nationality: "Turkish", passportNumber: "T45678901", phone: "+905304567890", campaignGroup: "Istanbul Hajj Group", permitStatus: "Valid", locationLat: 21.3830, locationLng: 39.9300, emergencyStatus: false },
-      { name: "Mustafa Celik", nationality: "Turkish", passportNumber: "T56789012", phone: "+905305678901", campaignGroup: "Diyanet Tours", permitStatus: "None", locationLat: 21.3845, locationLng: 39.9285, emergencyStatus: false },
+      { name: "Mustafa Celik", nationality: "Turkish", passportNumber: "T56789012", phone: "+905305678901", campaignGroup: "Diyanet Tours", permitStatus: "Pending", locationLat: 21.3845, locationLng: 39.9285, emergencyStatus: false },
       // Malaysian
       { name: "Ahmad Ibrahim", nationality: "Malaysian", passportNumber: "M12345678", phone: "+60121234567", campaignGroup: "Tabung Haji", permitStatus: "Valid", locationLat: 21.3550, locationLng: 39.9840, emergencyStatus: false },
       { name: "Nurul Huda", nationality: "Malaysian", passportNumber: "M23456789", phone: "+60122345678", campaignGroup: "Tabung Haji", permitStatus: "Valid", locationLat: 21.3560, locationLng: 39.9855, emergencyStatus: false },
@@ -213,7 +233,7 @@ async function seedDatabase() {
       // Nigerian
       { name: "Abubakar Musa", nationality: "Nigerian", passportNumber: "N12345678", phone: "+2348031234567", campaignGroup: "NAHCON Group", permitStatus: "Valid", locationLat: 21.4230, locationLng: 39.8740, emergencyStatus: false },
       { name: "Fatimah Bello", nationality: "Nigerian", passportNumber: "N23456789", phone: "+2348032345678", campaignGroup: "NAHCON Group", permitStatus: "Valid", locationLat: 21.4220, locationLng: 39.8725, emergencyStatus: false },
-      { name: "Ibrahim Garba", nationality: "Nigerian", passportNumber: "N34567890", phone: "+2348033456789", campaignGroup: "Abuja Hajj Board", permitStatus: "None", locationLat: 21.4235, locationLng: 39.8750, emergencyStatus: false },
+      { name: "Ibrahim Garba", nationality: "Nigerian", passportNumber: "N34567890", phone: "+2348033456789", campaignGroup: "Abuja Hajj Board", permitStatus: "Pending", locationLat: 21.4235, locationLng: 39.8750, emergencyStatus: false },
       { name: "Hauwa Umar", nationality: "Nigerian", passportNumber: "N45678901", phone: "+2348034567890", campaignGroup: "Abuja Hajj Board", permitStatus: "Valid", locationLat: 21.4225, locationLng: 39.8730, emergencyStatus: false },
       { name: "Suleiman Yusuf", nationality: "Nigerian", passportNumber: "N56789012", phone: "+2348035678901", campaignGroup: "NAHCON Group", permitStatus: "Expired", locationLat: 21.4215, locationLng: 39.8745, emergencyStatus: false },
       // Bangladeshi
@@ -221,13 +241,13 @@ async function seedDatabase() {
       { name: "Nasreen Akhter", nationality: "Bangladeshi", passportNumber: "BD23456789", phone: "+8801712345678", campaignGroup: "Bangladesh Hajj Mission", permitStatus: "Valid", locationLat: 21.4238, locationLng: 39.8278, emergencyStatus: false },
       { name: "Karim Hossain", nationality: "Bangladeshi", passportNumber: "BD34567890", phone: "+8801713456789", campaignGroup: "Dhaka Hajj Group", permitStatus: "Expired", locationLat: 21.4212, locationLng: 39.8258, emergencyStatus: false },
       { name: "Sharmin Begum", nationality: "Bangladeshi", passportNumber: "BD45678901", phone: "+8801714567890", campaignGroup: "Dhaka Hajj Group", permitStatus: "Valid", locationLat: 21.4222, locationLng: 39.8282, emergencyStatus: false },
-      { name: "Jahangir Alam", nationality: "Bangladeshi", passportNumber: "BD56789012", phone: "+8801715678901", campaignGroup: "Bangladesh Hajj Mission", permitStatus: "None", locationLat: 21.4245, locationLng: 39.8255, emergencyStatus: false },
+      { name: "Jahangir Alam", nationality: "Bangladeshi", passportNumber: "BD56789012", phone: "+8801715678901", campaignGroup: "Bangladesh Hajj Mission", permitStatus: "Pending", locationLat: 21.4245, locationLng: 39.8255, emergencyStatus: false },
       // Moroccan
       { name: "Youssef Benali", nationality: "Moroccan", passportNumber: "MR12345678", phone: "+212661234567", campaignGroup: "Moroccan Hajj Office", permitStatus: "Valid", locationLat: 21.4140, locationLng: 39.8900, emergencyStatus: false },
       { name: "Fatima Ezzahra", nationality: "Moroccan", passportNumber: "MR23456789", phone: "+212662345678", campaignGroup: "Moroccan Hajj Office", permitStatus: "Valid", locationLat: 21.4130, locationLng: 39.8915, emergencyStatus: false },
       { name: "Mohammed Alaoui", nationality: "Moroccan", passportNumber: "MR34567890", phone: "+212663456789", campaignGroup: "Casablanca Hajj", permitStatus: "Expired", locationLat: 21.4150, locationLng: 39.8895, emergencyStatus: false },
       { name: "Khadija Berrada", nationality: "Moroccan", passportNumber: "MR45678901", phone: "+212664567890", campaignGroup: "Casablanca Hajj", permitStatus: "Valid", locationLat: 21.4120, locationLng: 39.8905, emergencyStatus: false },
-      { name: "Hassan Rachidi", nationality: "Moroccan", passportNumber: "MR56789012", phone: "+212665678901", campaignGroup: "Moroccan Hajj Office", permitStatus: "None", locationLat: 21.4145, locationLng: 39.8910, emergencyStatus: false },
+      { name: "Hassan Rachidi", nationality: "Moroccan", passportNumber: "MR56789012", phone: "+212665678901", campaignGroup: "Moroccan Hajj Office", permitStatus: "Pending", locationLat: 21.4145, locationLng: 39.8910, emergencyStatus: false },
       // Indian
       { name: "Abdul Sattar", nationality: "Indian", passportNumber: "IN12345678", phone: "+919871234567", campaignGroup: "India Hajj Committee", permitStatus: "Valid", locationLat: 21.3835, locationLng: 39.9290, emergencyStatus: false },
       { name: "Farzana Khatoon", nationality: "Indian", passportNumber: "IN23456789", phone: "+919872345678", campaignGroup: "India Hajj Committee", permitStatus: "Valid", locationLat: 21.3848, locationLng: 39.9278, emergencyStatus: false },

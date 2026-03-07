@@ -21,6 +21,7 @@ export interface IStorage {
   getPilgrim(id: number): Promise<Pilgrim | undefined>;
   createPilgrim(pilgrim: InsertPilgrim): Promise<Pilgrim>;
   updatePilgrimLocation(id: number, lat: number, lng: number): Promise<Pilgrim>;
+  updatePilgrimHealth(id: number, data: Partial<Pick<Pilgrim, 'bloodType'|'allergies'|'medicalConditions'|'emergencyContact'|'healthStatus'>>): Promise<Pilgrim>;
 
   // Emergencies
   getEmergencies(): Promise<Emergency[]>;
@@ -59,6 +60,15 @@ export class DatabaseStorage implements IStorage {
       .set({ locationLat: lat, locationLng: lng, lastUpdated: new Date() })
       .where(eq(pilgrims.id, id))
       .returning();
+    return updated;
+  }
+
+  async updatePilgrimHealth(id: number, data: Partial<Pick<Pilgrim, 'bloodType'|'allergies'|'medicalConditions'|'emergencyContact'|'healthStatus'>>): Promise<Pilgrim> {
+    const [updated] = await db.update(pilgrims)
+      .set({ ...data, lastUpdated: new Date() })
+      .where(eq(pilgrims.id, id))
+      .returning();
+    if (!updated) throw new Error(`Pilgrim with id ${id} not found`);
     return updated;
   }
 

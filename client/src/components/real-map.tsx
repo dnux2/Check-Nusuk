@@ -184,7 +184,8 @@ function PilgrimMarker({ pilgrim, isHighlighted, ar, isRTL }: PilgrimMarkerProps
             {ar ? "التصريح:" : "Permit:"}{" "}
             <b style={{
               color: pilgrim.permitStatus === "Valid" ? "#10B981"
-                : pilgrim.permitStatus === "Expired" ? "#F59E0B" : "#EF4444"
+                : pilgrim.permitStatus === "Expired" ? "#F59E0B"
+                : pilgrim.permitStatus === "Pending" ? "#8B5CF6" : "#EF4444"
             }}>
               {pilgrim.permitStatus}
             </b>

@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -15,15 +15,31 @@ import { SecurityPage } from "@/pages/security";
 import { EmergenciesPage } from "@/pages/emergencies";
 import { ServicesPage } from "@/pages/services";
 import { TranslatorPage } from "@/pages/translator";
-import { PilgrimPortalPage } from "@/pages/pilgrim-portal";
 import { ChatPage } from "@/pages/chat";
 
-function Router() {
+import { PilgrimHomePage } from "@/pages/pilgrim-home";
+import { PilgrimMapPage } from "@/pages/pilgrim-map";
+import { PilgrimWalletPage } from "@/pages/pilgrim-wallet";
+import { PilgrimChatPage } from "@/pages/pilgrim-chat";
+import { PilgrimTranslatorPage } from "@/pages/pilgrim-translator";
+
+function PilgrimRoutes() {
+  return (
+    <Switch>
+      <Route path="/pilgrim" component={PilgrimHomePage} />
+      <Route path="/pilgrim/map" component={PilgrimMapPage} />
+      <Route path="/pilgrim/wallet" component={PilgrimWalletPage} />
+      <Route path="/pilgrim/chat" component={PilgrimChatPage} />
+      <Route path="/pilgrim/translator" component={PilgrimTranslatorPage} />
+    </Switch>
+  );
+}
+
+function AdminRoutes() {
   return (
     <Layout>
       <Switch>
         <Route path="/" component={LandingPage} />
-        <Route path="/pilgrim" component={PilgrimPortalPage} />
         <Route path="/dashboard" component={Dashboard} />
         <Route path="/pilgrims" component={PilgrimsPage} />
         <Route path="/crowd-management" component={CrowdManagementPage} />
@@ -36,6 +52,12 @@ function Router() {
       </Switch>
     </Layout>
   );
+}
+
+function Router() {
+  const [location] = useLocation();
+  const isPilgrimRoute = location.startsWith("/pilgrim");
+  return isPilgrimRoute ? <PilgrimRoutes /> : <AdminRoutes />;
 }
 
 function App() {

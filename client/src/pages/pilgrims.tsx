@@ -42,7 +42,7 @@ export function PilgrimsPage() {
       statusFilter === "all" ||
       (statusFilter === "valid" && p.permitStatus === "Valid") ||
       (statusFilter === "expired" && p.permitStatus === "Expired") ||
-      (statusFilter === "none" && p.permitStatus === "None");
+      (statusFilter === "none" && p.permitStatus === "Pending");
     return matchesSearch && matchesStatus;
   });
 

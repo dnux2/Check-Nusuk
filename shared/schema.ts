@@ -9,11 +9,17 @@ export const pilgrims = pgTable("pilgrims", {
   passportNumber: text("passport_number").notNull().unique(),
   phone: text("phone").notNull(),
   campaignGroup: text("campaign_group"),
-  permitStatus: text("permit_status").notNull(), // 'Valid', 'Expired', 'None'
+  permitStatus: text("permit_status").notNull(), // 'Valid', 'Expired', 'Pending'
   locationLat: doublePrecision("location_lat"),
   locationLng: doublePrecision("location_lng"),
   emergencyStatus: boolean("emergency_status").default(false),
   lastUpdated: timestamp("last_updated").defaultNow(),
+  // Health & wallet fields
+  bloodType: text("blood_type"),
+  allergies: text("allergies"),
+  medicalConditions: text("medical_conditions"),
+  emergencyContact: text("emergency_contact"),
+  healthStatus: text("health_status").default("Good"), // 'Good', 'Stable', 'NeedsAttention'
 });
 
 export const emergencies = pgTable("emergencies", {

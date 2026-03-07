@@ -10,8 +10,13 @@ CheckNusuk is a modern web application inspired by the Saudi Nusuk (nusuk.sa) pl
 The platform targets Hajj supervisors and administrators who need a unified control center for tracking pilgrims, managing emergencies, and monitoring crowd density across sectors.
 
 **Two portals:**
-- **Admin/Supervisor portal** (`/dashboard` and all sidebar routes)
-- **Pilgrim portal** (`/pilgrim`) — standalone page with Home, Messages, Translator tabs
+- **Admin/Supervisor portal** (`/dashboard` and all sidebar routes) — dark emerald design with full management tools
+- **Pilgrim portal** (`/pilgrim/*`) — warm beige Nusuk-style design with dedicated sidebar (desktop) + bottom nav (mobile):
+  - `/pilgrim` — Home: greeting, prayer times, Hajj journey steps, quick actions
+  - `/pilgrim/map` — Guide map: Leaflet with 24 real facility markers (hospitals, water, mosques, bathrooms, transport) + route guidance
+  - `/pilgrim/wallet` — Digital wallet: permit card + health data (blood type, allergies, conditions) + editable form
+  - `/pilgrim/chat` — Supervisor chat with message history
+  - `/pilgrim/translator` — AI translator with voice input, 8 languages
 
 ---
 
@@ -64,7 +69,7 @@ Preferred communication style: Simple, everyday language.
 
 - **Database**: PostgreSQL via Drizzle ORM (`drizzle-orm/node-postgres`). Connection managed by a `pg.Pool` in `server/db.ts`.
 - **Schema** (`shared/schema.ts`):
-  - `pilgrims` – Core table: name, nationality, passport number, phone, campaign group, permit status (`Valid`/`Expired`/`None`), GPS coordinates, emergency status.
+  - `pilgrims` – Core table: name, nationality, passport number, phone, campaign group, permit status (`Valid`/`Expired`/`Pending`), GPS coordinates, emergency status, plus health fields: bloodType, allergies, medicalConditions, emergencyContact, healthStatus (`Good`/`Stable`/`NeedsAttention`).
   - `emergencies` – Links to pilgrim, stores type (`Medical`/`Lost`/`Security`), status, GPS, timestamp.
   - `alerts` – System alerts: type (`Unauthorized`/`Crowd Density`/`Weather`), message, GPS, status.
   - `conversations` + `messages` – AI chat history (defined in `shared/models/chat.ts`, used by Replit integration chat storage).

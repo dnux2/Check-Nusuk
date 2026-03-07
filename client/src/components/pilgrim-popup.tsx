@@ -49,6 +49,8 @@ export function PilgrimPopup({ pilgrim, onClose }: PilgrimPopupProps) {
       ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
       : pilgrim.permitStatus === "Expired"
       ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+      : pilgrim.permitStatus === "Pending"
+      ? "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400"
       : "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400";
 
   const permitLabel =
@@ -56,6 +58,8 @@ export function PilgrimPopup({ pilgrim, onClose }: PilgrimPopupProps) {
       ? t("valid")
       : pilgrim.permitStatus === "Expired"
       ? t("expired")
+      : pilgrim.permitStatus === "Pending"
+      ? (lang === "ar" ? "قيد التحقق" : "Pending")
       : t("none");
 
   const healthLabel = pilgrim.emergencyStatus ? t("critical") : t("stable");
