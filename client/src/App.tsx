@@ -58,7 +58,7 @@ function AdminRoutes() {
 
 function Router() {
   const [location] = useLocation();
-  const isPilgrimRoute = location.startsWith("/pilgrim");
+  const isPilgrimRoute = location === "/pilgrim" || location.startsWith("/pilgrim/");
   return isPilgrimRoute ? <PilgrimRoutes /> : <AdminRoutes />;
 }
 

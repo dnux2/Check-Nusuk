@@ -143,19 +143,30 @@ export function Layout({ children }: { children: React.ReactNode }) {
         style={{ willChange: "margin" }}
       >
         {/* Header */}
-        <header className={`sticky top-0 z-10 h-16 flex-shrink-0 border-b border-border bg-card/80 backdrop-blur-md flex items-center justify-between px-4 ${isRTL ? "flex-row-reverse" : ""}`}>
-          <div className={`flex items-center gap-2 ${isRTL ? "flex-row-reverse" : ""}`}>
-            {/* Sidebar toggle */}
+        <header className={`sticky top-0 z-10 h-14 flex-shrink-0 border-b border-border bg-card/80 backdrop-blur-md flex items-center justify-between px-3 gap-2 ${isRTL ? "flex-row-reverse" : ""}`}>
+          {/* Left: hamburger + page title */}
+          <div className={`flex items-center gap-2 min-w-0 flex-shrink-0 ${isRTL ? "flex-row-reverse" : ""}`}>
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-1.5 rounded-lg hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
+              className="p-1.5 rounded-lg hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground flex-shrink-0"
               data-testid="button-sidebar-toggle"
               aria-label="Toggle sidebar"
             >
               <Menu className="w-5 h-5" />
             </button>
+            <h2 className="font-bold text-sm text-foreground hidden sm:block truncate">
+              {currentPage}
+            </h2>
+          </div>
 
-            {/* Language Toggle — next to hamburger */}
+          {/* Center: project name */}
+          <Link href="/" className="font-display font-bold text-base tracking-tight text-foreground hover:text-primary transition-colors flex-shrink-0" data-testid="link-home-header">
+            CheckNusuk
+          </Link>
+
+          {/* Right: lang toggle + bell + avatar */}
+          <div className={`flex items-center gap-1.5 flex-shrink-0 ${isRTL ? "flex-row-reverse" : ""}`}>
+            {/* Language Toggle */}
             <div className="flex items-center bg-secondary rounded-lg overflow-hidden border border-border">
               <button
                 data-testid="button-lang-en"
@@ -177,29 +188,20 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </button>
             </div>
 
-            {/* Bell — next to lang toggle */}
-            <button className="relative p-2 rounded-full hover:bg-secondary transition-colors">
-              <Bell className="w-5 h-5 text-muted-foreground" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-destructive animate-pulse" />
+            {/* Bell */}
+            <button className="relative p-1.5 rounded-lg hover:bg-secondary transition-colors flex-shrink-0">
+              <Bell className="w-4 h-4 text-muted-foreground" />
+              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-destructive animate-pulse" />
             </button>
 
-            <h2 className="font-bold text-lg text-foreground hidden sm:block ms-1">
-              {currentPage}
-            </h2>
-          </div>
-
-          {/* Center: project name */}
-          <Link href="/" className="absolute left-1/2 -translate-x-1/2 font-display font-bold text-lg tracking-tight text-foreground hover:text-primary transition-colors" data-testid="link-home-header">
-            CheckNusuk
-          </Link>
-
-          {/* Admin info — right side only */}
-          <div className={`flex items-center gap-3 ${isRTL ? "flex-row-reverse" : ""}`}>
-            <div className={`hidden sm:block ${isRTL ? "text-right" : "text-right"}`}>
-              <p className="text-sm font-bold text-foreground">{t("adminSupervisor")}</p>
-              <p className="text-xs text-muted-foreground">{t("sector")}</p>
+            {/* Admin info + avatar */}
+            <div className={`hidden sm:flex items-center gap-2 ${isRTL ? "flex-row-reverse" : ""}`}>
+              <div className={isRTL ? "text-right" : "text-right"}>
+                <p className="text-xs font-bold text-foreground leading-tight">{t("adminSupervisor")}</p>
+                <p className="text-[10px] text-muted-foreground">{t("sector")}</p>
+              </div>
             </div>
-            <div className="w-9 h-9 rounded-full bg-accent text-accent-foreground flex items-center justify-center font-bold shadow-sm flex-shrink-0 text-sm">
+            <div className="w-8 h-8 rounded-full bg-accent text-accent-foreground flex items-center justify-center font-bold shadow-sm flex-shrink-0 text-xs">
               AS
             </div>
           </div>
