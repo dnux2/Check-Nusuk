@@ -218,6 +218,107 @@ type GpsStatus = "idle" | "requesting" | "granted" | "denied";
 
 type CrowdAlt = { facility: Facility; crowdScore: number; distM: number };
 
+function FacilitySheet({
+  ar, isRTL, type, selectedId, myLat, myLng, currentHour, onNavigate, onClose,
+}: {
+  ar: boolean; isRTL: boolean;
+  type: FacilityType; selectedId: string;
+  myLat: number; myLng: number; currentHour: number;
+  onNavigate: (f: Facility) => void; onClose: () => void;
+}) {
+  const cfg = TYPE_CONFIG[type];
+  const facilities = FACILITIES
+    .filter(f => f.type === type)
+    .map(f => ({ f, distM: haversineM(myLat, myLng, f.lat, f.lng), cs: getCrowdScore(f.id, f.type, currentHour) }))
+    .sort((a, b) => a.distM - b.distM);
+
+  return (
+    <div className="absolute bottom-0 left-0 right-0 z-[800] flex flex-col" style={{ maxHeight: "62%" }}>
+      {/* backdrop tap-to-close strip */}
+      <div className="flex-1" onClick={onClose} />
+      <div className="rounded-t-3xl shadow-2xl flex flex-col overflow-hidden" style={{ background: "white", direction: isRTL ? "rtl" : "ltr" }}>
+        {/* Handle bar */}
+        <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
+          <div className="w-10 h-1 rounded-full bg-gray-200" />
+        </div>
+        {/* Header */}
+        <div className="px-4 pb-3 pt-1 flex items-center justify-between flex-shrink-0 border-b border-gray-100">
+          <div className="flex items-center gap-2">
+            <div className="w-9 h-9 rounded-2xl flex items-center justify-center text-lg flex-shrink-0"
+              style={{ background: cfg.lightHex, border: `2px solid ${cfg.colorHex}` }}>
+              {cfg.emoji}
+            </div>
+            <div>
+              <div className="font-bold text-gray-900 text-[15px]">{ar ? cfg.labelAr : cfg.labelEn}</div>
+              <div className="text-[11px] text-gray-400">{facilities.length} {ar ? "مواقع قريبة" : "nearby locations"}</div>
+            </div>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 flex-shrink-0">
+            <X className="w-4 h-4 text-gray-500" />
+          </button>
+        </div>
+        {/* Legend */}
+        <div className="px-4 py-2 flex items-center gap-3 flex-shrink-0" style={{ background: "#f9fafb" }}>
+          <span className="text-[10px] text-gray-500">{ar ? "مستوى الزحام:" : "Crowd level:"}</span>
+          {[{ c: "#27ae60", l: ar ? "هادئ" : "Calm" }, { c: "#e67e22", l: ar ? "متوسط" : "Moderate" }, { c: "#e74c3c", l: ar ? "شديد" : "Heavy" }].map(x => (
+            <span key={x.c} className="flex items-center gap-1">
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: x.c, display: "inline-block" }} />
+              <span className="text-[10px] text-gray-500">{x.l}</span>
+            </span>
+          ))}
+        </div>
+        {/* List */}
+        <div className="overflow-y-auto" style={{ overscrollBehavior: "contain" }}>
+          {facilities.map(({ f, distM, cs }, idx) => {
+            const cColor = crowdColor(cs);
+            const isSelected = f.id === selectedId;
+            const cLabelAr = cs >= 75 ? "زحام شديد" : cs >= 50 ? "زحام متوسط" : "هادئ";
+            const cLabelEn = cs >= 75 ? "Heavy" : cs >= 50 ? "Moderate" : "Calm";
+            return (
+              <div key={f.id}
+                className="px-4 py-3 flex items-center gap-3 border-b border-gray-50 transition-colors"
+                style={{ background: isSelected ? cfg.lightHex + "88" : "white" }}
+                data-testid={`facility-item-${f.id}`}>
+                {/* Rank badge */}
+                <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+                  style={{ background: idx === 0 ? cfg.colorHex : "#f0f0f0", color: idx === 0 ? "white" : "#888" }}>
+                  {idx + 1}
+                </div>
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <span className="font-semibold text-[13px] text-gray-900 truncate">{ar ? f.nameAr : f.nameEn}</span>
+                    {isSelected && <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold flex-shrink-0" style={{ background: cfg.colorHex, color: "white" }}>{ar ? "اخترته" : "selected"}</span>}
+                  </div>
+                  {(ar ? f.detailAr : f.detailEn) && (
+                    <div className="text-[11px] text-gray-400 truncate mb-1">{ar ? f.detailAr : f.detailEn}</div>
+                  )}
+                  <div className="flex items-center gap-3">
+                    <span className="text-[11px] text-gray-500">📍 {fmtDist(distM, ar)}</span>
+                    <span className="text-[11px] text-gray-500">🕐 {fmtTime(distM / 1.2, ar)}</span>
+                    <span className="text-[10px] font-semibold" style={{ color: cColor }}>● {ar ? cLabelAr : cLabelEn} {cs}%</span>
+                  </div>
+                  {/* Crowd bar */}
+                  <div className="mt-1.5 h-1.5 rounded-full bg-gray-100 overflow-hidden w-full">
+                    <div style={{ width: `${cs}%`, height: "100%", background: cColor, borderRadius: 4, transition: "width 0.5s" }} />
+                  </div>
+                </div>
+                {/* Navigate button */}
+                <button onClick={() => onNavigate(f)} data-testid={`nav-btn-${f.id}`}
+                  className="flex-shrink-0 w-9 h-9 rounded-2xl flex items-center justify-center transition-colors"
+                  style={{ background: "#0E4D41", color: "white" }}>
+                  <Navigation className="w-4 h-4" />
+                </button>
+              </div>
+            );
+          })}
+          <div className="h-4" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function CrowdWarningModal({
   ar, facility, crowdScore, alternatives, analysis, loading, onNavigate, onPickAlt, onClose,
 }: {
@@ -346,10 +447,11 @@ function makeCustomOriginIcon() {
   });
 }
 
-function MapClickHandler({ picking, onPick }: { picking: boolean; onPick: (lat: number, lng: number) => void }) {
+function MapClickHandler({ picking, onPick, onMapClick }: { picking: boolean; onPick: (lat: number, lng: number) => void; onMapClick: () => void }) {
   useMapEvents({
     click(e) {
       if (picking) onPick(e.latlng.lat, e.latlng.lng);
+      else onMapClick();
     },
   });
   return null;
@@ -430,6 +532,8 @@ export function PilgrimGuideMap() {
   } | null>(null);
   const [crowdAnalysis, setCrowdAnalysis] = useState("");
   const [crowdAnalysisLoading, setCrowdAnalysisLoading] = useState(false);
+
+  const [facilitySheet, setFacilitySheet] = useState<{ type: FacilityType; selectedId: string } | null>(null);
 
   const currentHour = new Date().getHours();
 
@@ -731,7 +835,7 @@ export function PilgrimGuideMap() {
       )}
 
       {/* Map */}
-      <div className="flex-1" style={{ minHeight: 0 }}>
+      <div className="flex-1 relative" style={{ minHeight: 0 }}>
         {navLoading && (
           <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
             <div className="bg-white rounded-2xl px-6 py-4 shadow-xl flex items-center gap-3">
@@ -747,7 +851,7 @@ export function PilgrimGuideMap() {
             setCustomOrigin({ lat, lng });
             setPickingOrigin(false);
             toast({ title: ar ? "📍 تم اختيار نقطة البداية" : "📍 Start location set" });
-          }} />
+          }} onMapClick={() => setFacilitySheet(null)} />
 
           {flyToGps && !navRoute && gpsPos && <FlyToPos lat={gpsPos.lat} lng={gpsPos.lng} />}
           {navRoute && <FitRoute coords={navRoute.coords} />}
@@ -766,48 +870,37 @@ export function PilgrimGuideMap() {
           )}
 
           {!navRoute && visibleFacilities.map(facility => {
-            const distM = haversineM(myLat, myLng, facility.lat, facility.lng);
-            const distLabel = fmtDist(distM, ar);
             const cs = getCrowdScore(facility.id, facility.type, currentHour);
-            const cColor = crowdColor(cs);
-            const cLabelAr = cs >= 75 ? "زحام شديد" : cs >= 50 ? "زحام متوسط" : "هادئ";
-            const cLabelEn = cs >= 75 ? "Heavy" : cs >= 50 ? "Moderate" : "Calm";
+            const isActive = facilitySheet?.selectedId === facility.id;
             return (
-              <Marker key={facility.id} position={[facility.lat, facility.lng]} icon={makeFacilityIcon(facility.type, false, cs)}>
-                <Popup maxWidth={220}>
-                  <div style={{ direction: isRTL ? "rtl" : "ltr", fontFamily: "inherit", minWidth: 180 }}>
-                    <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4, color: TYPE_CONFIG[facility.type].colorHex }}>
-                      {TYPE_CONFIG[facility.type].emoji} {ar ? facility.nameAr : facility.nameEn}
-                    </div>
-                    {(ar ? facility.detailAr : facility.detailEn) && (
-                      <div style={{ fontSize: 11, color: "#6B4F35", marginBottom: 6 }}>{ar ? facility.detailAr : facility.detailEn}</div>
-                    )}
-                    <div style={{ fontSize: 11, color: "#8B6E4E", marginBottom: 6, display: "flex", gap: 10 }}>
-                      <span>📍 {distLabel}</span>
-                      <span>🕐 {fmtTime(distM / 1.2, ar)}</span>
-                    </div>
-                    <div style={{ marginBottom: 10 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3, fontSize: 10 }}>
-                        <span style={{ fontWeight: 700, color: cColor }}>👥 {ar ? cLabelAr : cLabelEn}</span>
-                        <span style={{ color: cColor, fontWeight: 700 }}>{cs}%</span>
-                      </div>
-                      <div style={{ height: 5, borderRadius: 4, background: "#f0f0f0", overflow: "hidden" }}>
-                        <div style={{ height: "100%", width: `${cs}%`, background: cColor, borderRadius: 4 }} />
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => handleNavigate(facility)}
-                      style={{ display: "block", width: "100%", padding: "7px 12px", background: "#0E4D41", color: "#fff", borderRadius: 10, fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer" }}
-                    >
-                      🗺️ {ar ? "وجّهني الآن" : "Navigate Now"}
-                    </button>
-                  </div>
-                </Popup>
-              </Marker>
+              <Marker
+                key={facility.id}
+                position={[facility.lat, facility.lng]}
+                icon={makeFacilityIcon(facility.type, isActive, cs)}
+                zIndexOffset={isActive ? 500 : 0}
+                eventHandlers={{
+                  click: () => setFacilitySheet({ type: facility.type, selectedId: facility.id }),
+                }}
+              />
             );
           })}
 
         </MapContainer>
+
+        {/* Facility bottom sheet — overlays the map */}
+        {facilitySheet && !navRoute && (
+          <FacilitySheet
+            ar={ar}
+            isRTL={isRTL}
+            type={facilitySheet.type}
+            selectedId={facilitySheet.selectedId}
+            myLat={myLat}
+            myLng={myLng}
+            currentHour={currentHour}
+            onNavigate={(f) => { setFacilitySheet(null); handleNavigate(f); }}
+            onClose={() => setFacilitySheet(null)}
+          />
+        )}
       </div>
 
       {crowdModal && (
