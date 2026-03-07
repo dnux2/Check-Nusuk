@@ -184,7 +184,7 @@ export function PilgrimLayout({ children }: { children: React.ReactNode }) {
             CheckNusuk
           </Link>
 
-          {/* End: bell + SOS */}
+          {/* End: bell + SOS + logout */}
           <div className={`flex items-center gap-1 ${isRTL ? "flex-row-reverse" : ""}`}>
             <button className="relative p-1.5 rounded-lg hover:bg-secondary transition-colors" data-testid="btn-pilgrim-bell">
               <Bell className="w-5 h-5 text-muted-foreground" />
@@ -193,6 +193,19 @@ export function PilgrimLayout({ children }: { children: React.ReactNode }) {
             <Link href="/pilgrim" className="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors" data-testid="btn-top-sos">
               <AlertTriangle className="w-5 h-5 text-destructive" />
             </Link>
+            <button
+              onClick={() => {
+                localStorage.removeItem("isLoggedIn");
+                localStorage.removeItem("role");
+                localStorage.removeItem("passport");
+                window.location.replace("/login?tab=pilgrim");
+              }}
+              className="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive"
+              title={ar ? "تسجيل الخروج" : "Logout"}
+              data-testid="btn-logout-pilgrim-header"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
           </div>
         </header>
 
