@@ -1,6 +1,6 @@
 import { usePilgrims, useCreatePilgrim, useDeletePilgrim, useUpdatePilgrimPermitStatus } from "@/hooks/use-pilgrims";
 import { useState, useEffect, useMemo } from "react";
-import { Search, Plus, MapPin, Eye, ShieldAlert, Navigation, ChevronDown, ChevronRight, Users, Trash2, Clock, AlertCircle } from "lucide-react";
+import { Search, Plus, MapPin, Eye, ShieldAlert, Navigation, ChevronDown, ChevronRight, Users, Trash2, Clock, AlertCircle, ArrowUpDown, UserCheck } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage } from "@/contexts/language-context";
@@ -24,6 +24,8 @@ export function PilgrimsPage() {
   const [selectedPilgrim, setSelectedPilgrim] = useState<Pilgrim | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [genderFilter, setGenderFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("name");
 
   // Auto-open pilgrim details when navigated from map with ?pilgrimId=X
   useEffect(() => {
@@ -53,8 +55,10 @@ export function PilgrimsPage() {
       (statusFilter === "expired" && p.permitStatus === "Expired") ||
       (statusFilter === "none" && p.permitStatus === "Pending") ||
       (statusFilter === "review" && p.permitStatus === "UnderReview");
-    return matchesSearch && matchesStatus;
-  }), [pilgrims, search, statusFilter]);
+    const matchesGender =
+      genderFilter === "all" || p.gender === genderFilter;
+    return matchesSearch && matchesStatus && matchesGender;
+  }), [pilgrims, search, statusFilter, genderFilter]);
 
   // Build groups from filtered pilgrims — grouped by nationality within the single campaign
   const groups = useMemo(() => {
@@ -65,14 +69,37 @@ export function PilgrimsPage() {
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(p);
     }
+    const sortMembers = (members: Pilgrim[]) => [...members].sort((a, b) => {
+      // Emergency status always first
+      const emg = (b.emergencyStatus ? 1 : 0) - (a.emergencyStatus ? 1 : 0);
+      if (emg !== 0) return emg;
+      if (sortBy === "age-asc") {
+        if (a.age == null && b.age == null) return 0;
+        if (a.age == null) return 1;
+        if (b.age == null) return -1;
+        return a.age - b.age;
+      }
+      if (sortBy === "age-desc") {
+        if (a.age == null && b.age == null) return 0;
+        if (a.age == null) return 1;
+        if (b.age == null) return -1;
+        return b.age - a.age;
+      }
+      if (sortBy === "gender") {
+        const ga = a.gender ?? "zzz";
+        const gb = b.gender ?? "zzz";
+        return ga.localeCompare(gb) || a.name.localeCompare(b.name);
+      }
+      return a.name.localeCompare(b.name);
+    });
     return Array.from(map.entries())
       .map(([name, members]) => ({
         name,
-        members: [...members].sort((a, b) => (b.emergencyStatus ? 1 : 0) - (a.emergencyStatus ? 1 : 0) || a.name.localeCompare(b.name)),
+        members: sortMembers(members),
         emergencyCount: members.filter(p => p.emergencyStatus).length,
       }))
       .sort((a, b) => b.emergencyCount - a.emergencyCount || a.name.localeCompare(b.name));
-  }, [filtered]);
+  }, [filtered, sortBy]);
 
   // Auto-expand groups that have matches when searching
   useEffect(() => {
@@ -93,9 +120,11 @@ export function PilgrimsPage() {
   const collapseAll = () => setExpandedGroups(new Set());
 
   const handleCreateMock = () => {
+    const genders = ["Male", "Female"];
+    const g = genders[Math.floor(Math.random() * 2)];
     createPilgrim.mutate(
       {
-        name: "Ahmed Al-Farsi",
+        name: g === "Male" ? "Ahmed Al-Farsi" : "Fatimah Al-Nouri",
         nationality: "Oman",
         passportNumber: "OM" + Math.floor(Math.random() * 1000000),
         phone: "+968 9123 4567",
@@ -104,6 +133,8 @@ export function PilgrimsPage() {
         locationLat: 21.4225,
         locationLng: 39.8262,
         emergencyStatus: false,
+        age: 30 + Math.floor(Math.random() * 40),
+        gender: g,
       },
       { onSuccess: () => setModalOpen(false) }
     );
@@ -125,6 +156,13 @@ export function PilgrimsPage() {
 
   const totalFiltered = filtered?.length ?? 0;
   const totalEmergency = filtered?.filter(p => p.emergencyStatus).length ?? 0;
+  const totalMale = filtered?.filter(p => p.gender === "Male").length ?? 0;
+  const totalFemale = filtered?.filter(p => p.gender === "Female").length ?? 0;
+  const avgAge = useMemo(() => {
+    const withAge = filtered?.filter(p => p.age != null) ?? [];
+    if (!withAge.length) return null;
+    return Math.round(withAge.reduce((s, p) => s + p.age!, 0) / withAge.length);
+  }, [filtered]);
 
   return (
     <div className="p-6 md:p-8 max-w-[1600px] mx-auto">
@@ -160,12 +198,13 @@ export function PilgrimsPage() {
               dir={isRTL ? "rtl" : "ltr"}
             />
           </div>
-          <div className={`flex items-center gap-3 flex-wrap ${isRTL ? "flex-row-reverse" : ""}`}>
+          <div className={`flex items-center gap-2 flex-wrap ${isRTL ? "flex-row-reverse" : ""}`}>
+            {/* Status filter */}
             <select
               data-testid="select-status-filter"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className={`px-4 py-2.5 rounded-xl bg-background border-2 border-border focus:outline-none focus:border-primary w-full sm:w-auto ${isRTL ? "text-right" : ""}`}
+              className={`px-3 py-2 rounded-xl bg-background border-2 border-border focus:outline-none focus:border-primary text-sm ${isRTL ? "text-right" : ""}`}
             >
               <option value="all">{t("allStatus")}</option>
               <option value="valid">{t("validPermit")}</option>
@@ -173,6 +212,32 @@ export function PilgrimsPage() {
               <option value="none">{t("none")}</option>
               <option value="review">{ar ? "جاري المراجعة" : "Under Review"}</option>
             </select>
+
+            {/* Gender filter */}
+            <select
+              data-testid="select-gender-filter"
+              value={genderFilter}
+              onChange={(e) => setGenderFilter(e.target.value)}
+              className={`px-3 py-2 rounded-xl bg-background border-2 border-border focus:outline-none focus:border-primary text-sm ${isRTL ? "text-right" : ""}`}
+            >
+              <option value="all">{ar ? "جميع الجنسين" : "All Genders"}</option>
+              <option value="Male">{ar ? "ذكر" : "Male"}</option>
+              <option value="Female">{ar ? "أنثى" : "Female"}</option>
+            </select>
+
+            {/* Sort */}
+            <select
+              data-testid="select-sort-by"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className={`px-3 py-2 rounded-xl bg-background border-2 border-border focus:outline-none focus:border-primary text-sm ${isRTL ? "text-right" : ""}`}
+            >
+              <option value="name">{ar ? "فرز: الاسم" : "Sort: Name"}</option>
+              <option value="age-asc">{ar ? "فرز: العمر ↑" : "Sort: Age ↑"}</option>
+              <option value="age-desc">{ar ? "فرز: العمر ↓" : "Sort: Age ↓"}</option>
+              <option value="gender">{ar ? "فرز: الجنس" : "Sort: Gender"}</option>
+            </select>
+
             <button
               data-testid="button-expand-all-groups"
               onClick={expandAll}
@@ -191,11 +256,29 @@ export function PilgrimsPage() {
         </div>
 
         {/* Summary bar */}
-        <div className={`px-4 py-2.5 bg-muted/30 border-b border-border flex items-center gap-4 text-sm text-muted-foreground ${isRTL ? "flex-row-reverse" : ""}`}>
+        <div className={`px-4 py-2.5 bg-muted/30 border-b border-border flex items-center gap-4 flex-wrap text-sm text-muted-foreground ${isRTL ? "flex-row-reverse" : ""}`}>
           <span className={`flex items-center gap-1.5 font-medium ${isRTL ? "flex-row-reverse" : ""}`}>
             <Users className="w-4 h-4" />
             {totalFiltered} {ar ? "حاج" : "pilgrims"} · {groups.length} {ar ? "جنسية" : "nationalities"}
           </span>
+          {totalMale > 0 && (
+            <span className={`flex items-center gap-1 text-blue-600 dark:text-blue-400 font-semibold ${isRTL ? "flex-row-reverse" : ""}`}>
+              <UserCheck className="w-3.5 h-3.5" />
+              {totalMale} {ar ? "ذكر" : "male"}
+            </span>
+          )}
+          {totalFemale > 0 && (
+            <span className={`flex items-center gap-1 text-pink-600 dark:text-pink-400 font-semibold ${isRTL ? "flex-row-reverse" : ""}`}>
+              <UserCheck className="w-3.5 h-3.5" />
+              {totalFemale} {ar ? "أنثى" : "female"}
+            </span>
+          )}
+          {avgAge !== null && (
+            <span className={`flex items-center gap-1 text-amber-600 dark:text-amber-400 font-semibold ${isRTL ? "flex-row-reverse" : ""}`}>
+              <ArrowUpDown className="w-3.5 h-3.5" />
+              {ar ? `متوسط العمر: ${avgAge}` : `Avg age: ${avgAge}`}
+            </span>
+          )}
           {totalEmergency > 0 && (
             <span className={`flex items-center gap-1.5 text-destructive font-semibold ${isRTL ? "flex-row-reverse" : ""}`}>
               <ShieldAlert className="w-4 h-4" />
@@ -257,6 +340,8 @@ export function PilgrimsPage() {
                               <th className={`${isRTL ? "pr-14 pl-4" : "pl-14 pr-4"} py-2.5`}>{t("name")}</th>
                               <th className="px-4 py-2.5 hidden md:table-cell">{t("nationality")}</th>
                               <th className="px-4 py-2.5 hidden sm:table-cell">{t("passport")}</th>
+                              <th className="px-4 py-2.5 hidden md:table-cell">{ar ? "العمر" : "Age"}</th>
+                              <th className="px-4 py-2.5 hidden md:table-cell">{ar ? "الجنس" : "Gender"}</th>
                               <th className="px-4 py-2.5">{t("permitStatus")}</th>
                               <th className="px-4 py-2.5 hidden lg:table-cell">{t("location")}</th>
                               <th className={`px-4 py-2.5 ${isRTL ? "text-left" : "text-right"}`}>{t("actions")}</th>
@@ -284,6 +369,24 @@ export function PilgrimsPage() {
                                 </td>
                                 <td className="px-4 py-3.5 hidden md:table-cell text-muted-foreground text-sm">{p.nationality}</td>
                                 <td className="px-4 py-3.5 hidden sm:table-cell text-muted-foreground font-mono text-xs">{p.passportNumber}</td>
+                                <td className="px-4 py-3.5 hidden md:table-cell text-muted-foreground text-sm">
+                                  {p.age != null ? (
+                                    <span className="px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs font-bold">
+                                      {p.age} {ar ? "سنة" : "yr"}
+                                    </span>
+                                  ) : "—"}
+                                </td>
+                                <td className="px-4 py-3.5 hidden md:table-cell">
+                                  {p.gender === "Male" ? (
+                                    <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-bold">
+                                      {ar ? "ذكر" : "Male"}
+                                    </span>
+                                  ) : p.gender === "Female" ? (
+                                    <span className="px-2 py-0.5 rounded-full bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-400 text-xs font-bold">
+                                      {ar ? "أنثى" : "Female"}
+                                    </span>
+                                  ) : <span className="text-muted-foreground text-sm">—</span>}
+                                </td>
                                 <td className="px-4 py-3.5">
                                   <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${permitBadge(p.permitStatus)}`}>
                                     {permitLabel(p.permitStatus)}

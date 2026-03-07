@@ -14,6 +14,9 @@ export const pilgrims = pgTable("pilgrims", {
   locationLng: doublePrecision("location_lng"),
   emergencyStatus: boolean("emergency_status").default(false),
   lastUpdated: timestamp("last_updated").defaultNow(),
+  // Demographics
+  age: integer("age"),
+  gender: text("gender"), // 'Male', 'Female'
   // Health & wallet fields
   bloodType: text("blood_type"),
   allergies: text("allergies"),

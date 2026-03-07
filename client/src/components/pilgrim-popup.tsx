@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { X, MapPin, Phone, Shield, Users, Hash, Clock, Heart, AlertCircle, Navigation, MessageSquare } from "lucide-react";
+import { X, MapPin, Phone, Shield, Users, Hash, Clock, Heart, AlertCircle, Navigation, MessageSquare, UserCheck, Calendar } from "lucide-react";
 import { type Pilgrim } from "@shared/schema";
 import { useLanguage } from "@/contexts/language-context";
 import { format } from "date-fns";
@@ -137,6 +137,12 @@ export function PilgrimPopup({ pilgrim, onClose }: PilgrimPopupProps) {
           <div className="px-6 py-4 space-y-0">
             <InfoRow icon={Hash} label={t("passport")} value={pilgrim.passportNumber} mono />
             <InfoRow icon={Phone} label={t("phone")} value={pilgrim.phone} mono />
+            {pilgrim.age != null && (
+              <InfoRow icon={Calendar} label={lang === "ar" ? "العمر" : "Age"} value={`${pilgrim.age} ${lang === "ar" ? "سنة" : "years"}`} />
+            )}
+            {pilgrim.gender && (
+              <InfoRow icon={UserCheck} label={lang === "ar" ? "الجنس" : "Gender"} value={lang === "ar" ? (pilgrim.gender === "Male" ? "ذكر" : "أنثى") : pilgrim.gender} />
+            )}
             <InfoRow icon={Users} label={t("campaign")} value={pilgrim.campaignGroup ?? t("unknown")} />
             <InfoRow icon={Shield} label={t("permitStatus")} value={permitLabel} />
             <InfoRow icon={Heart} label={t("healthStatus")} value={healthLabel} />
