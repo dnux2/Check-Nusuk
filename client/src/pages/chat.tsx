@@ -5,9 +5,10 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { type ChatMessage, type Pilgrim } from "@shared/schema";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Users, MessageSquare, ChevronLeft, ChevronRight, PanelLeftOpen, PanelLeftClose } from "lucide-react";
+import { Send, Users, MessageSquare, ChevronLeft, ChevronRight, PanelLeftOpen, PanelLeftClose, Wifi, WifiOff } from "lucide-react";
 import { format } from "date-fns";
 import { useSearch } from "wouter";
+import { useChatWebSocket } from "@/hooks/use-chat-ws";
 
 export function ChatPage() {
   const { t, isRTL, lang } = useLanguage();
@@ -19,11 +20,23 @@ export function ChatPage() {
   const [selectedPilgrimId, setSelectedPilgrimId] = useState<number | null>(urlPilgrimId);
   const [input, setInput] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [wsConnected, setWsConnected] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  const wsStatusRef = useChatWebSocket(() => {
+    setWsConnected(wsStatusRef.current === "open");
+  });
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setWsConnected(wsStatusRef.current === "open");
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [wsStatusRef]);
 
   const { data: messages = [] } = useQuery<ChatMessage[]>({
     queryKey: ["/api/chat/messages"],
-    refetchInterval: 3000,
+    refetchInterval: wsConnected ? false : 3000,
   });
 
   const sendMessage = useMutation({
@@ -204,7 +217,23 @@ export function ChatPage() {
             </p>
           </div>
 
-          {/* Unread badge for current */}
+          {/* WS connection status */}
+          <div
+            data-testid="status-ws-connection"
+            title={wsConnected ? (ar ? "متصل — رسائل فورية" : "Connected — live") : (ar ? "غير متصل — يعيد الاتصال..." : "Reconnecting...")}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold flex-shrink-0 border transition-colors ${
+              wsConnected
+                ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800"
+                : "bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800"
+            }`}
+          >
+            {wsConnected
+              ? <><Wifi className="w-3 h-3" />{ar ? "مباشر" : "Live"}</>
+              : <><WifiOff className="w-3 h-3" />{ar ? "يتصل..." : "..."}</>
+            }
+          </div>
+
+          {/* Open sidebar shortcut when hidden */}
           {!sidebarOpen && (
             <button
               onClick={() => setSidebarOpen(true)}

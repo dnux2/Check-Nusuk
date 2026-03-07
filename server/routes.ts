@@ -5,6 +5,7 @@ import { api } from "@shared/routes";
 import { insertChatMessageSchema } from "@shared/schema";
 import { z } from "zod";
 import OpenAI from "openai";
+import { broadcastChatMessage } from "./ws";
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
@@ -322,6 +323,7 @@ export async function registerRoutes(
     try {
       const input = insertChatMessageSchema.parse(req.body);
       const msg = await storage.createChatMessage(input);
+      broadcastChatMessage(msg);
       res.status(201).json(msg);
     } catch (err) {
       if (err instanceof z.ZodError) {
