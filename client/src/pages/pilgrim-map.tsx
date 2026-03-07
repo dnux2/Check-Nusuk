@@ -22,7 +22,7 @@ export function PilgrimMapPage() {
               <MapPin className="w-5 h-5 text-[#0E4D41]" />
               <div>
                 <h1 className="font-bold text-[#0E4D41] text-[19px]">{ar ? "خريطتي المساعدة" : "My Guide Map"}</h1>
-                <p className="text-xs text-[#2d7a5f]/70">
+                <p className="text-xs text-[#2d7a5f]/70 mt-[3px] mb-[3px]">
                   {ar ? "موقعك + أقرب المنشآت والخدمات" : "Your location + nearest facilities & services"}
                 </p>
               </div>

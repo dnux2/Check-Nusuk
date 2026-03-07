@@ -60,12 +60,12 @@ const FACILITIES: Facility[] = [
   { id: "t4", type: "transport", nameAr: "موقف مزدلفة الليلي",     nameEn: "Muzdalifah Night Stop",    lat: 21.3800, lng: 39.9310, detailAr: "نقل ليلي لمنى",         detailEn: "Night transport to Mina" },
 ];
 
-const TYPE_CONFIG: Record<FacilityType, { colorHex: string; emoji: string; labelAr: string; labelEn: string }> = {
-  hospital:  { colorHex: "#B03A2E", emoji: "🏥", labelAr: "المستشفيات",   labelEn: "Hospitals" },
-  water:     { colorHex: "#1A5C8A", emoji: "💧", labelAr: "نقاط المياه",  labelEn: "Water Points" },
-  mosque:    { colorHex: "#0E4D41", emoji: "🕌", labelAr: "المساجد",      labelEn: "Mosques" },
-  bathroom:  { colorHex: "#7B5E3A", emoji: "🚻", labelAr: "دورات المياه", labelEn: "Restrooms" },
-  transport: { colorHex: "#C49A3C", emoji: "🚌", labelAr: "النقل",        labelEn: "Transport" },
+const TYPE_CONFIG: Record<FacilityType, { colorHex: string; lightHex: string; emoji: string; labelAr: string; labelEn: string }> = {
+  hospital:  { colorHex: "#B03A2E", lightHex: "#f5dedd", emoji: "🏥", labelAr: "المستشفيات",   labelEn: "Hospitals" },
+  water:     { colorHex: "#1A5C8A", lightHex: "#d6e9f5", emoji: "💧", labelAr: "نقاط المياه",  labelEn: "Water Points" },
+  mosque:    { colorHex: "#0E4D41", lightHex: "#d4ede6", emoji: "🕌", labelAr: "المساجد",      labelEn: "Mosques" },
+  bathroom:  { colorHex: "#7B5E3A", lightHex: "#ede5d8", emoji: "🚻", labelAr: "دورات المياه", labelEn: "Restrooms" },
+  transport: { colorHex: "#C49A3C", lightHex: "#f5ecd6", emoji: "🚌", labelAr: "النقل",        labelEn: "Transport" },
 };
 
 function makeFacilityIcon(type: FacilityType) {
