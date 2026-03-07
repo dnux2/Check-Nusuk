@@ -12,12 +12,15 @@ export function PageHeader({ icon, title, subtitle, badge, iconColor = "bg-prima
   const { isRTL } = useLanguage();
 
   return (
-    <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 ${isRTL ? "sm:flex-row-reverse" : ""}`}>
-      <div className={`flex items-center gap-4 ${isRTL ? "flex-row-reverse" : ""}`}>
+    <div
+      dir={isRTL ? "rtl" : "ltr"}
+      className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8"
+    >
+      <div className="flex items-center gap-4">
         <div className={`w-12 h-12 rounded-2xl border flex items-center justify-center flex-shrink-0 shadow-sm ${iconColor}`}>
           {icon}
         </div>
-        <div className={isRTL ? "text-right" : ""}>
+        <div>
           <h1 className="text-2xl md:text-3xl font-display font-bold text-foreground leading-tight">
             {title}
           </h1>
