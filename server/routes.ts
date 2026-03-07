@@ -1,4 +1,4 @@
-import type { Express, Request, Response } from "express";
+import type { Express } from "express";
 import type { Server } from "http";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
@@ -465,35 +465,6 @@ Write a brief analysis (3-4 sentences) explaining why it's crowded now, then rec
     }
   });
 
-  // Auth routes
-  app.post("/api/auth/login", async (req: Request, res: Response) => {
-    const { username, password } = req.body;
-    if (!username || !password) {
-      return res.status(400).json({ message: "Username and password required" });
-    }
-    const user = await storage.findUserByUsername(String(username).toUpperCase());
-    if (!user || user.password !== String(password)) {
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
-    req.session.userId = user.id;
-    req.session.role = user.role;
-    req.session.name = user.name;
-    req.session.pilgrimId = user.pilgrimId ?? null;
-    return res.json({ userId: user.id, role: user.role, name: user.name, pilgrimId: user.pilgrimId ?? null });
-  });
-
-  app.post("/api/auth/logout", (req: Request, res: Response) => {
-    req.session.destroy(() => {});
-    res.json({ ok: true });
-  });
-
-  app.get("/api/auth/me", (req: Request, res: Response) => {
-    if (!req.session.userId) {
-      return res.status(401).json({ message: "Not authenticated" });
-    }
-    return res.json({ userId: req.session.userId, role: req.session.role, name: req.session.name, pilgrimId: req.session.pilgrimId ?? null });
-  });
-
   await seedDatabase();
 
   return httpServer;
@@ -570,36 +541,6 @@ async function seedDatabase() {
         await storage.createPilgrim(p);
       } catch {
         // skip duplicate passport numbers
-      }
-    }
-  }
-
-  // Seed demo users
-  const adminUser = await storage.findUserByUsername("ADMIN");
-  if (!adminUser) {
-    // Seed supervisor accounts (username stored uppercase)
-    await storage.createUser({ username: "ADMIN", password: "nusuk2026", role: "supervisor", pilgrimId: null, name: "Admin Supervisor" });
-    await storage.createUser({ username: "SUPERVISOR1", password: "hajj1446", role: "supervisor", pilgrimId: null, name: "Ahmed Supervisor" });
-
-    // Seed pilgrim accounts: passport (uppercase) = username, PIN = password
-    // Link to pilgrims seeded above (A12345678 = id 1, B98765432 = id 6, C45678912 = id 11)
-    const allPilgrims = await storage.getPilgrims({ limit: 100 });
-    const findId = (passport: string) => allPilgrims.find(p => p.passportNumber === passport)?.id ?? null;
-
-    const pilgrimCredentials = [
-      { passport: "A12345678", pin: "1234" },
-      { passport: "B98765432", pin: "5678" },
-      { passport: "C45678912", pin: "9012" },
-    ];
-    for (const { passport, pin } of pilgrimCredentials) {
-      const pilgrimId = findId(passport);
-      const pilgrim = allPilgrims.find(p => p.passportNumber === passport);
-      if (pilgrimId && pilgrim) {
-        try {
-          await storage.createUser({ username: passport, password: pin, role: "pilgrim", pilgrimId, name: pilgrim.name });
-        } catch {
-          // skip duplicate
-        }
       }
     }
   }
