@@ -98,11 +98,11 @@ export function PilgrimPopup({ pilgrim, onClose }: PilgrimPopupProps) {
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.92, opacity: 0, y: 20 }}
           transition={{ type: "spring", damping: 25, stiffness: 300 }}
-          className={`bg-card w-full max-w-md rounded-2xl shadow-2xl border border-border overflow-hidden ${isRTL ? "text-right" : "text-left"}`}
+          className={`bg-card w-full max-w-md rounded-2xl shadow-2xl border border-border overflow-hidden flex flex-col max-h-[90vh] ${isRTL ? "text-right" : "text-left"}`}
           dir={isRTL ? "rtl" : "ltr"}
         >
           {/* Header */}
-          <div className="bg-gradient-to-br from-primary to-emerald-600 px-6 pt-6 pb-8 relative overflow-hidden">
+          <div className="bg-gradient-to-br from-primary to-emerald-600 px-6 pt-6 pb-8 relative overflow-hidden flex-shrink-0">
             <div className="absolute inset-0 opacity-10"
               style={{ backgroundImage: "radial-gradient(circle at 70% 50%, white 1px, transparent 1px)", backgroundSize: "20px 20px" }}
             />
@@ -133,8 +133,8 @@ export function PilgrimPopup({ pilgrim, onClose }: PilgrimPopupProps) {
             </div>
           </div>
 
-          {/* Info Section */}
-          <div className="px-6 py-4 space-y-0">
+          {/* Info Section — scrollable */}
+          <div className="px-6 py-4 space-y-0 overflow-y-auto flex-1 min-h-0">
             <InfoRow icon={Hash} label={t("passport")} value={pilgrim.passportNumber} mono />
             <InfoRow icon={Phone} label={t("phone")} value={pilgrim.phone} mono />
             {pilgrim.age != null && (
@@ -169,8 +169,8 @@ export function PilgrimPopup({ pilgrim, onClose }: PilgrimPopupProps) {
             />
           </div>
 
-          {/* Action Buttons */}
-          <div className={`px-6 pb-6 flex gap-3 ${isRTL ? "flex-row-reverse" : ""}`}>
+          {/* Action Buttons — always visible at bottom */}
+          <div className={`px-6 py-4 flex gap-3 border-t border-border flex-shrink-0 bg-card ${isRTL ? "flex-row-reverse" : ""}`}>
             <button
               data-testid="button-track-route"
               onClick={handleTrackRoute}
